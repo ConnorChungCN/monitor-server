@@ -25,11 +25,11 @@ func (obj *MonitorGateway) StorageInfo(ctx context.Context, workers []*model.Sys
 	if workers == nil {
 		return nil
 	}
-	cpuDataPoints := make([]*model.StorgeDataPoint, len(workers))
-	memoryDataPoints := make([]*model.StorgeDataPoint, len(workers))
-	gpuDataPoints := make([]*model.StorgeDataPoint, len(workers))
+	cpuDataPoints := make([]*client.DataPoint, len(workers))
+	memoryDataPoints := make([]*client.DataPoint, len(workers))
+	gpuDataPoints := make([]*client.DataPoint, len(workers))
 	for i, v := range workers {
-		cpuDataPoints[i] = &model.StorgeDataPoint{
+		cpuDataPoints[i] = &client.DataPoint{
 			Tags: map[string]string{
 				"AlgorithmName":    v.AlgorithmName,
 				"AlgorithmVersion": v.AlgorithmVersion,
@@ -40,7 +40,7 @@ func (obj *MonitorGateway) StorageInfo(ctx context.Context, workers []*model.Sys
 			},
 			Timestamp: time.Now(),
 		}
-		memoryDataPoints[i] = &model.StorgeDataPoint{
+		memoryDataPoints[i] = &client.DataPoint{
 			Tags: map[string]string{
 				"AlgorithmName":    v.AlgorithmName,
 				"AlgorithmVersion": v.AlgorithmVersion,
@@ -52,7 +52,7 @@ func (obj *MonitorGateway) StorageInfo(ctx context.Context, workers []*model.Sys
 			},
 			Timestamp: time.Now(),
 		}
-		gpuDataPoints[i] = &model.StorgeDataPoint{
+		gpuDataPoints[i] = &client.DataPoint{
 			Tags: map[string]string{
 				"AlgorithmName":    v.AlgorithmName,
 				"AlgorithmVersion": v.AlgorithmVersion,

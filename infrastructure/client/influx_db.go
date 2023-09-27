@@ -4,7 +4,6 @@ import (
 	"time"
 
 	client "github.com/influxdata/influxdb1-client/v2"
-	"hanglok-tech.com/monitor-server/domain/model"
 	"hanglok-tech.com/monitor-server/infrastructure/config"
 	"hanglok-tech.com/monitor-server/infrastructure/logger"
 )
@@ -14,11 +13,11 @@ type InfluxDBClient struct {
 	Database string
 }
 
-// type DataPoint struct {
-// 	Tags      map[string]string
-// 	Fields    map[string]interface{}
-// 	Timestamp time.Time
-// }
+type DataPoint struct {
+	Tags      map[string]string
+	Fields    map[string]interface{}
+	Timestamp time.Time
+}
 
 // 判断数据库是否存在
 func dbExists(c client.Client, dbName string) (bool, error) {
@@ -81,7 +80,7 @@ func (obj *InfluxDBClient) QueryData(queryString string) (*client.Response, erro
 }
 
 // 写入数据
-func (obj *InfluxDBClient) WriteData(measurement string, dataPoints []*model.StorgeDataPoint) error {
+func (obj *InfluxDBClient) WriteData(measurement string, dataPoints []*DataPoint) error {
 	bp, err := client.NewBatchPoints(client.BatchPointsConfig{
 		Database:  obj.Database,
 		Precision: "s",

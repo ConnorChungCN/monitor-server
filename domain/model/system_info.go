@@ -1,13 +1,5 @@
 package model
 
-import "time"
-
-type StorgeDataPoint struct {
-	Tags      map[string]string
-	Fields    map[string]interface{}
-	Timestamp time.Time
-}
-
 type SystemState struct {
 	TaskId           string
 	AlgorithmName    string
