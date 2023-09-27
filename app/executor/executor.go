@@ -20,8 +20,8 @@ func NewExecutor(monitorManager gateway.MonitorManager) *Executor {
 	}
 }
 
-func (obj *Executor) FindTaskInfoById(ctx context.Context, taskId string) (*model.ResultByTaskId, error) {
-	findResult, err := obj.MonitorManager.FindByTaskId(ctx, taskId)
+func (obj *Executor) FindTaskInfoById(ctx context.Context, taskId string) (*model.Summary, error) {
+	findResult, err := obj.MonitorManager.FindSummaryByTaskId(ctx, taskId)
 	if err != nil {
 		logger.Logger.Errorf("FindByTaskId fail: %s", err)
 		return nil, fmt.Errorf("FindByTaskId fail: %s", err)

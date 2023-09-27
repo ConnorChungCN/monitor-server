@@ -44,8 +44,8 @@ message FindTaskInfoByIdReq {
 
 message FindTaskInfoByIdRsp {
     float AvgCPUPercent = 1;
-    uint64 AvgMemoryUsed = 2;
-    uint64 AvgMemoryMaxUsed = 3;
+    int64 AvgMemoryUsed = 2;
+    int64 AvgMemoryMaxUsed = 3;
 }
 
 service monitor {

@@ -20,8 +20,15 @@ type Monitor struct {
 	SchedulerClient *client.SchedulerClient
 }
 
-// 获取一个worker的系统指标
-func getWorkerInfo(ctx context.Context, host string, port int64) (*model.SystemState, error) {
+func NewMonitor(monitorManager gateway.MonitorManager, schedulerClient *client.SchedulerClient) *Monitor {
+	return &Monitor{
+		MonitorManager:  monitorManager,
+		SchedulerClient: schedulerClient,
+	}
+}
+
+// 获取一个worker的系统指标（cpu、memory）
+func (obj *Monitor) getWorkerInfo(ctx context.Context, host string, port int64) (*model.SystemState, error) {
 	url := fmt.Sprintf("%s:%d", host, port)
 	conn, err := grpc.Dial(url, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -36,10 +43,12 @@ func getWorkerInfo(ctx context.Context, host string, port int64) (*model.SystemS
 	cpuState := &model.CPUState{
 		CPUPercent: rsp.CpuPercent,
 	}
+	logger.Logger.Infof("cpuState: %+v\n", cpuState)
 	memoryState := &model.MemoryState{
 		MemoryUsed:    rsp.MemoryUsage,
 		MemoryMaxUsed: rsp.MemoryMaxUsage,
 	}
+	logger.Logger.Infof("memoryState: %+v\n", memoryState)
 	gpuState := &model.GPUState{
 		//TODO:GPU
 	}
@@ -50,68 +59,47 @@ func getWorkerInfo(ctx context.Context, host string, port int64) (*model.SystemS
 	}, nil
 }
 
-func NewMonitor(monitorManager gateway.MonitorManager, schedulerClient *client.SchedulerClient) *Monitor {
-	return &Monitor{
-		MonitorManager:  monitorManager,
-		SchedulerClient: schedulerClient,
-	}
-}
-
 // 获取所有worker的系统指标
-func (obj *Monitor) GetAllWorkerInfo(ctx context.Context) ([]*model.TaskSysInfo, error) {
+func (obj *Monitor) GetBusyWorkerInfo(ctx context.Context) ([]*model.SystemState, error) {
 	rsp, err := obj.SchedulerClient.Client.ListWorkers(ctx, &scheduler.ListWorkerReq{})
 	if err != nil {
 		return nil, fmt.Errorf("grpc ListTask failed: %w", err)
 	}
-	retWorkers := make([]*model.TaskSysInfo, 0)
-	for i, v := range rsp.Workers {
+	retWorkers := make([]*model.SystemState, 0)
+	for _, v := range rsp.Workers {
 		//如果worker不在运行则跳出本次循环
-		logger.Logger.Infof("work: %+v", v)
-
 		if v.GetRunningTask().GetTaskId() == "" {
 			continue
 		}
-		retWorkers = append(retWorkers, &model.TaskSysInfo{
-			RunningWorkerPort: v.Port,
-			RunningWorkerHost: v.Host,
-		})
+		port := v.Port
+		host := v.Host
 		//grpc调用worker获取系统指标
-		systemstate, err := getWorkerInfo(ctx, v.Host, v.Port)
+		systemstate, err := obj.getWorkerInfo(ctx, host, port)
 		if err != nil {
 			return nil, fmt.Errorf("grpc GetContainerStat failed: %w", err)
 		}
-		logger.Logger.Infof("systemstate: %v", systemstate)
 		systemstate.AlgorithmName = v.RunningTask.AlgorithmName
 		systemstate.AlgorithmVersion = v.RunningTask.AlgorithmVersion
 		systemstate.TaskId = v.RunningTask.TaskId
-		retWorkers[i].TaskSystemState = systemstate
+		retWorkers = append(retWorkers, systemstate)
+	}
+	if len(retWorkers) == 0 {
+		logger.Logger.Infof("no Info need to persist")
+		return nil, nil
 	}
 	return retWorkers, nil
 }
 
-// 持久化数据
-func (obj *Monitor) PersistenceInfo(ctx context.Context, workers []*model.TaskSysInfo) error {
-	if len(workers) == 0 {
-		logger.Logger.Infof("no Info need to persist")
-		return nil
-	}
-	err := obj.MonitorManager.StorageInfo(ctx, workers)
-	if err != nil {
-		return fmt.Errorf("StorageInfo failed, %w", err)
-	}
-	return nil
-}
-
 func (obj *Monitor) UpdateInfo(ctx context.Context) error {
 	// 调用 GetInfo 方法获取系统指标
-	workers, err := obj.GetAllWorkerInfo(ctx)
+	workers, err := obj.GetBusyWorkerInfo(ctx)
 	if err != nil {
 		return fmt.Errorf("GetInfo failed: %w", err)
 	}
 	// 持久化数据
-	err = obj.PersistenceInfo(ctx, workers)
+	err = obj.MonitorManager.StorageInfo(ctx, workers)
 	if err != nil {
-		return fmt.Errorf("PersistenceInfo failed: %w", err)
+		return fmt.Errorf("StorageInfo failed, %w", err)
 	}
 	return nil
 }
@@ -123,9 +111,15 @@ func (obj *Monitor) StartMonitoring(ctx context.Context, interval time.Duration)
 	for {
 		select {
 		case <-ticker.C:
-			err := obj.UpdateInfo(ctx)
+			workers, err := obj.GetBusyWorkerInfo(ctx)
 			if err != nil {
-				logger.Logger.Errorf("UpdateInfo failed: %s", err)
+				logger.Logger.Errorf("no worker running :%s", err)
+				break
+			}
+			// 持久化数据
+			err = obj.MonitorManager.StorageInfo(ctx, workers)
+			if err != nil {
+				logger.Logger.Errorf("Storage Info failed:%s", err)
 			}
 		case <-ctx.Done():
 			return

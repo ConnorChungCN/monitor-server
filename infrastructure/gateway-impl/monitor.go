@@ -7,19 +7,7 @@ import (
 
 	"hanglok-tech.com/monitor-server/domain/model"
 	"hanglok-tech.com/monitor-server/infrastructure/client"
-	"hanglok-tech.com/monitor-server/infrastructure/logger"
 )
-
-// 暂定义查询结果为平均值
-// type ResultByTaskId struct {
-// 	TaskId           string
-// 	AvgCPUPercent    float32
-// 	AvgMemoryUsed    uint64
-// 	AvgMemoryMaxUsed uint64
-// 	// CudaVersion   string
-// 	// AttachedGPUs  string
-// 	// GPUsInfo      []*model.GPUInfo
-// }
 
 type MonitorGateway struct {
 	InfluxDBClient  *client.InfluxDBClient
@@ -33,62 +21,60 @@ func NewMonitorGateway(influxDBClient *client.InfluxDBClient, schedulerClient *c
 	}, nil
 }
 
-func (obj *MonitorGateway) StorageInfo(ctx context.Context, workers []*model.TaskSysInfo) error {
+func (obj *MonitorGateway) StorageInfo(ctx context.Context, workers []*model.SystemState) error {
+	if workers == nil {
+		return nil
+	}
 	cpuDataPoints := make([]*model.StorgeDataPoint, len(workers))
-	for i, v := range workers {
-		logger.Logger.Infof("worker:%+v", v)
-		cpuDataPoints[i] = &model.StorgeDataPoint{
-			Tags: map[string]string{
-				"AlgorithmName":    v.TaskSystemState.AlgorithmName,
-				"AlgorithmVersion": v.TaskSystemState.AlgorithmVersion,
-				"TaskId":           v.TaskSystemState.TaskId,
-			},
-			Fields: map[string]interface{}{
-				"CPUPercent": v.TaskSystemState.CPUState.CPUPercent,
-			},
-			Timestamp: time.Now(),
-		}
-	}
 	memoryDataPoints := make([]*model.StorgeDataPoint, len(workers))
-	for i, v := range workers {
-		memoryDataPoints[i] = &model.StorgeDataPoint{
-			Tags: map[string]string{
-				"AlgorithmName":    v.TaskSystemState.AlgorithmName,
-				"AlgorithmVersion": v.TaskSystemState.AlgorithmVersion,
-				"TaskId":           v.TaskSystemState.TaskId,
-			},
-			Fields: map[string]interface{}{
-				"MemoryUsed":    v.TaskSystemState.MemoryState.MemoryUsed,
-				"MemoryMaxUsed": v.TaskSystemState.MemoryState.MemoryMaxUsed,
-			},
-			Timestamp: time.Now(),
-		}
-	}
 	gpuDataPoints := make([]*model.StorgeDataPoint, len(workers))
 	for i, v := range workers {
+		cpuDataPoints[i] = &model.StorgeDataPoint{
+			Tags: map[string]string{
+				"AlgorithmName":    v.AlgorithmName,
+				"AlgorithmVersion": v.AlgorithmVersion,
+				"TaskId":           v.TaskId,
+			},
+			Fields: map[string]interface{}{
+				"CPUPercent": v.CPUState.CPUPercent,
+			},
+			Timestamp: time.Now(),
+		}
+		memoryDataPoints[i] = &model.StorgeDataPoint{
+			Tags: map[string]string{
+				"AlgorithmName":    v.AlgorithmName,
+				"AlgorithmVersion": v.AlgorithmVersion,
+				"TaskId":           v.TaskId,
+			},
+			Fields: map[string]interface{}{
+				"MemoryUsed":    int64(v.MemoryState.MemoryUsed),
+				"MemoryMaxUsed": int64(v.MemoryState.MemoryMaxUsed),
+			},
+			Timestamp: time.Now(),
+		}
 		gpuDataPoints[i] = &model.StorgeDataPoint{
 			Tags: map[string]string{
-				"AlgorithmName":    v.TaskSystemState.AlgorithmName,
-				"AlgorithmVersion": v.TaskSystemState.AlgorithmVersion,
-				"TaskId":           v.TaskSystemState.TaskId,
+				"AlgorithmName":    v.AlgorithmName,
+				"AlgorithmVersion": v.AlgorithmVersion,
+				"TaskId":           v.TaskId,
 			},
 			Fields: map[string]interface{}{
 				//TODO:gpu指标
-				"CudaVersion":  v.TaskSystemState.GPUState.CudaVersion,
-				"AttachedGPUs": v.TaskSystemState.GPUState.AttachedGPUs,
+				"CudaVersion":  v.GPUState.CudaVersion,
+				"AttachedGPUs": v.GPUState.AttachedGPUs,
 			},
 			Timestamp: time.Now(),
 		}
 	}
 	obj.InfluxDBClient.WriteData("containerCPUState", cpuDataPoints)
-	obj.InfluxDBClient.WriteData("containerMemoryState", memoryDataPoints)
-	obj.InfluxDBClient.WriteData("containerGPUState", gpuDataPoints)
+	obj.InfluxDBClient.WriteData("containerMemState", memoryDataPoints)
+	// obj.InfluxDBClient.WriteData("containerGPUState", gpuDataPoints)
 	return nil
 }
 
-func (obj *MonitorGateway) FindByTaskId(ctx context.Context, taskId string) (*model.ResultByTaskId, error) {
+func (obj *MonitorGateway) FindSummaryByTaskId(ctx context.Context, taskId string) (*model.Summary, error) {
 	// 初始化一个 ResultByTaskId 结构体
-	result := &model.ResultByTaskId{
+	result := &model.Summary{
 		TaskId: taskId,
 	}
 	// 查询 containerCPUState 中的数据
@@ -119,21 +105,21 @@ func (obj *MonitorGateway) FindByTaskId(ctx context.Context, taskId string) (*mo
 	//memoryRsp.Results[0].Series[0].Columns字段名数组
 	//memoryRsp.Results[0].Series[0].Values是[时间, memoryUsed的值, memoryMaxUsed的值]
 	if len(memoryRsp.Results) > 0 && len(memoryRsp.Results[0].Series) > 0 {
-		var memoryUsed []uint64
-		var memoryMaxUsed []uint64
-		var totalMemoryUsed uint64 = 0
-		var totalmemoryMaxUsed uint64 = 0
+		var memoryUsed []int64
+		var memoryMaxUsed []int64
+		var totalMemoryUsed int64 = 0
+		var totalmemoryMaxUsed int64 = 0
 		for _, values := range memoryRsp.Results[0].Series[0].Values {
 			// values 是一个 []interface{}，其中包含了每条记录的字段值
 			// 将 values 中的字段值提取出来并进行相应的处理
-			memoryUsed = append(memoryUsed, uint64(values[1].(float64)))
-			memoryMaxUsed = append(memoryMaxUsed, uint64(values[2].(float64)))
-			totalMemoryUsed += uint64(values[1].(float64))
-			totalmemoryMaxUsed += uint64(values[2].(float64))
+			memoryUsed = append(memoryUsed, int64(values[1].(float64)))
+			memoryMaxUsed = append(memoryMaxUsed, int64(values[2].(float64)))
+			totalMemoryUsed += int64(values[1].(float64))
+			totalmemoryMaxUsed += int64(values[2].(float64))
 
 		}
-		result.AvgMemoryUsed = totalMemoryUsed / uint64(len(memoryUsed))
-		result.AvgMemoryMaxUsed = totalmemoryMaxUsed / uint64(len(memoryMaxUsed))
+		result.AvgMemoryUsed = totalMemoryUsed / int64(len(memoryUsed))
+		result.AvgMemoryMaxUsed = totalmemoryMaxUsed / int64(len(memoryMaxUsed))
 	}
 	// 查询 containerGPUState 中的数据
 	// gpuQueryString := fmt.Sprintf(`SELECT "CudaVersion", "AttachedGPUs" FROM containerGPUState WHERE "TaskId"='%s'`, taskId)
