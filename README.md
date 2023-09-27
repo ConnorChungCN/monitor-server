@@ -1,4 +1,4 @@
-# 算法监控服务
+# 算法管理服务
 
 # 目录结构
 ``` shell
@@ -20,7 +20,8 @@
 ```
 
 # 依赖工具
-
+- mysql: 算法结构化数据存储
+- minio: 算法镜像存储
 
 # 命令
 ```shell
@@ -32,9 +33,5 @@ go run ./cmd/main.go ./cmd/wire_gen.go
 
 # 编译
 go build ./cmd/main.go ./cmd/wire_gen.go
-
-# 注入
-cd cmd && wire
 ```
-
 

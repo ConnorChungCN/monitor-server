@@ -1,0 +1,113 @@
+syntax = "proto3";
+// 包名
+package scheduler;
+// 生成的go文件位置及其包名
+option go_package = "hanglok-tech.com/scheduler-server/adapter/grpc/proto/scheduler;scheduler";
+
+
+message Algorithm {
+    int64 id = 1;
+    string algorithm_id = 2;
+    string algorithm_name = 3;
+    int64 algorithm_type = 4;
+    int64 part = 5;
+    repeated AlgoVersion versions = 6;
+  }
+  
+  message AlgoVersion {
+    int64 id = 1;
+    string version_id = 2;
+    string version = 3;
+    string url = 4;
+    string schema = 5;
+    bool upload = 6;
+  }
+
+message TaskInfo {
+    int64 id = 1;
+    string task_id = 2;
+    string worker_id = 3;
+    string algorithm_name = 4; 
+    string algorithm_version = 5;
+    int64 status = 6;
+    int64 executor_state = 7;
+    string desc = 8;
+    string input = 9;
+    string output = 10;
+    int64 ctime = 11;
+    int64 utime = 12;
+}
+
+message SysStatus {
+    float cpu = 1;
+    float memory = 2;
+    int64 cpu_core = 3;
+    int64 memory_size = 4;
+}
+
+message WorkerInfo {
+    string id = 1;
+    string name = 2;
+    string host = 3;
+    int64 port = 4;
+    int64 status = 5;
+    int64 ctime = 6;
+    int64 utime = 7;
+    TaskInfo running_task = 8;
+    SysStatus sys_status = 9;
+}
+
+message ListWorkerReq {}
+message ListWorkerRsp {
+    repeated WorkerInfo workers = 1;
+}
+
+message RegistetWorkerReq{
+    WorkerInfo worker = 1;
+}
+message RegistetWorkerRsp{}
+
+message StartTaskReq {
+    string algorithm_name = 1;
+    string algorithm_version = 2;
+    string params = 3;
+    Algorithm algorithm = 4;
+}
+message StartTaskRsp {
+    string task_id = 1;
+}
+
+message StopTaskReq {
+    string task_id = 1;
+}
+message StopTaskRsp {}
+
+message GetTaskReq {
+    string task_id = 1;
+}
+message GetTaskRsp {
+    TaskInfo task = 1;
+}
+
+message ListTaskReq{}
+message ListTaskRsp{
+    repeated TaskInfo tasks = 1;
+}
+
+message SetTaskResultReq {
+    string task_id = 1;
+    string reusult = 2;
+    int64 state = 3;
+    string desc = 4;
+}
+message SetTaskResultRsp {}
+
+service Scheduler{
+    rpc ListWorkers(ListWorkerReq) returns (ListWorkerRsp);
+    rpc RegistetWorker(RegistetWorkerReq) returns (RegistetWorkerRsp);
+    rpc StartTask(StartTaskReq) returns (StartTaskRsp);
+    rpc StopTask(StopTaskReq) returns (StopTaskRsp);
+    rpc GetTask(GetTaskReq) returns (GetTaskRsp);
+    rpc ListTask(ListTaskReq) returns (ListTaskRsp);
+    rpc SetTaskResult(SetTaskResultReq) returns (SetTaskResultRsp);
+}

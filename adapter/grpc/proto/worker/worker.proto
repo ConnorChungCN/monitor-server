@@ -1,0 +1,106 @@
+syntax = "proto3";
+// 包名
+package worker;
+// 生成的go文件位置及其包名
+option go_package = "hanglok-tech.com/worker-server/adapter/grpc/proto/worker;worker";
+
+message Algorithm {
+  int64 id = 1;
+  string algorithm_id = 2;
+  string algorithm_name = 3;
+  int64 algorithm_type = 4;
+  int64 part = 5;
+  repeated AlgoVersion versions = 6;
+}
+
+message AlgoVersion {
+  int64 id = 1;
+  string version_id = 2;
+  string version = 3;
+  string url = 4;
+  string schema = 5;
+  bool upload = 6;
+}
+
+message StartTaskReq {
+  int64 id = 1;
+  string task_id = 2;
+  string worker_id = 3;
+  string algorithm_name = 4; 
+  string algorithm_version = 5;
+  string algorithm_image_url = 6;
+  string algorithm_schema = 7;
+  int64 status = 8;
+  int64 executor_state = 9;
+  string desc = 10;
+  string input = 11;
+  string output = 12;
+  int64 ctime = 13;
+  int64 utime = 14;
+  Algorithm algorithm = 15;
+}
+
+message StartTaskRsp {
+}
+
+message StopTaskReq {
+  string task_id = 1;
+}
+
+message StopTaskRsp {
+}
+
+message GetContainerStatReq {
+}
+
+message GetContainerStatRsp {
+  float cpu_percent = 1;
+  uint64 memory_usage = 2;
+  uint64 memory_max_usage = 3;
+  string container_state = 4;
+  ContainerGpuStatRsp gpu_rsq = 5;
+}
+
+message ContainerStatRsp {
+  float avg_cpu_percent = 1;
+  uint64 avg_memory_usage = 2;
+  float peak_cpu_percent = 3;
+  uint64 peak_memory_usage = 4; 
+}
+
+message ContainerGpuStatRsp {
+  string timp_stamp = 1;
+  string Cuda_version = 2;
+  string Attached_gpus = 3;
+  repeated GPUInfo gpu_info = 4;
+}
+
+message GPUInfo {
+  string product_name = 1;
+  FBMemoryUsage fb_memory_usage = 2;
+  Utilization utilization = 3;
+}
+
+message FBMemoryUsage {
+  string total = 1;
+  string reserved = 2;
+  string used = 3;
+  string free = 4;
+}
+
+message Utilization {
+  string gpu_util = 1;
+  string memory_util = 2;
+  string encoder_util = 3;
+  string decoder_util = 4;
+}
+
+service Worker{
+  // 执行task
+  rpc StartTask(StartTaskReq) returns (StartTaskRsp);
+  // 停止task
+  rpc StopTask(StopTaskReq) returns (StopTaskRsp);
+  // // 查询容器的GPU
+  // rpc GetContainerGpuStat (ContainerIdReq) returns (ContainerGpuStatRsq);
+  rpc GetContainerStat (GetContainerStatReq) returns (GetContainerStatRsp);
+}
