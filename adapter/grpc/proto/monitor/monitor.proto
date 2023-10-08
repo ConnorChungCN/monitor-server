@@ -5,42 +5,38 @@ package monitor;
 option go_package = "hanglok-tech.com/monitor-server/adapter/grpc/proto/monitor;monitor";
 
 message TaskInfo {
-    CPUState cpu_state = 1;
-    MemoryState memory_state = 2;
-    GPUInfo gpu_state = 3;
+    CpuStats cpu_state = 1;
+    MemoryStats memory_state = 2;
+    GpuStats gpu_state = 3;
 }
 
-message CPUState {
-    float cpu_percent = 1;
-}
-
-message MemoryState {
-    uint64 memory_used = 1;
-    uint64 memory_max_used = 2;
-}
-
-message GPUState {
+message CpuStats {
+    float usage = 1;
+  }
+  
+  message MemoryStats {
+    float usage = 1;
+    uint64 used = 2;
+    uint64 free = 3;
+  }
+  
+  message GpuStats {
     string cuda_version = 1;
-    string attached_gpus = 2;
-    repeated GPUInfo gpus_info = 3;
-}
-
-message GPUInfo {
-    string product_name = 1;
-    float memory_total = 2;
-    float memory_used = 3;
-    float memory_free = 4;
-    float gpu_usage = 5;
-    float memory_usage = 6;
-}
+    repeated GpuInstanceStats gpu_instance_stats = 2;
+  }
+  
+  message GpuInstanceStats {
+    string id = 1;
+    string product_name = 2;
+    float gpu_usage = 3;
+    float memory_usage = 4;
+    uint64 memory_used = 5;
+    uint64 memory_free = 6;
+  }
 
 message FindTaskInfoByIdReq {
     string task_id = 1;
 }
-
-// message FindTaskInfoByIdRsp {
-//     TaskInfo task_info = 1;
-// }
 
 message FindTaskInfoByIdRsp {
     float AvgCPUPercent = 1;
