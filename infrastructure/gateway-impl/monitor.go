@@ -36,7 +36,7 @@ func (obj *MonitorGateway) StorageInfo(ctx context.Context, workers []*model.Sys
 				"TaskId":           v.TaskId,
 			},
 			Fields: map[string]interface{}{
-				"CPUPercent": v.CPUState.CPUPercent,
+				"CPUPercent": v.CpuStats.CPUPercent,
 			},
 			Timestamp: time.Now(),
 		}
@@ -47,8 +47,9 @@ func (obj *MonitorGateway) StorageInfo(ctx context.Context, workers []*model.Sys
 				"TaskId":           v.TaskId,
 			},
 			Fields: map[string]interface{}{
-				"MemoryUsed":    int64(v.MemoryState.MemoryUsed),
-				"MemoryMaxUsed": int64(v.MemoryState.MemoryMaxUsed),
+				"MemoryUsage": v.MemoryStats.Usage,
+				"MemoryUsed":  v.MemoryStats.Used,
+				"MemoryFree":  v.MemoryStats.Free,
 			},
 			Timestamp: time.Now(),
 		}
@@ -60,8 +61,7 @@ func (obj *MonitorGateway) StorageInfo(ctx context.Context, workers []*model.Sys
 			},
 			Fields: map[string]interface{}{
 				//TODO:gpu指标
-				"CudaVersion":  v.GPUState.CudaVersion,
-				"AttachedGPUs": v.GPUState.AttachedGPUs,
+				"CudaVersion": v.GpuStats.CudaVersion,
 			},
 			Timestamp: time.Now(),
 		}

@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.3.0
 // - protoc             v3.6.1
-// source: adapter/grpc/proto/worker/worker.proto
+// source: worker.proto
 
 // 包名
 
@@ -21,9 +21,9 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	Worker_StartTask_FullMethodName        = "/worker.Worker/StartTask"
-	Worker_StopTask_FullMethodName         = "/worker.Worker/StopTask"
-	Worker_GetContainerStat_FullMethodName = "/worker.Worker/GetContainerStat"
+	Worker_StartTask_FullMethodName     = "/worker.Worker/StartTask"
+	Worker_StopTask_FullMethodName      = "/worker.Worker/StopTask"
+	Worker_GetTaskMetric_FullMethodName = "/worker.Worker/GetTaskMetric"
 )
 
 // WorkerClient is the client API for Worker service.
@@ -34,9 +34,8 @@ type WorkerClient interface {
 	StartTask(ctx context.Context, in *StartTaskReq, opts ...grpc.CallOption) (*StartTaskRsp, error)
 	// 停止task
 	StopTask(ctx context.Context, in *StopTaskReq, opts ...grpc.CallOption) (*StopTaskRsp, error)
-	// // 查询容器的GPU
-	// rpc GetContainerGpuStat (ContainerIdReq) returns (ContainerGpuStatRsq);
-	GetContainerStat(ctx context.Context, in *GetContainerStatReq, opts ...grpc.CallOption) (*GetContainerStatRsp, error)
+	// 查询task指标
+	GetTaskMetric(ctx context.Context, in *GetTaskMetricReq, opts ...grpc.CallOption) (*GetTaskMetricRsp, error)
 }
 
 type workerClient struct {
@@ -65,9 +64,9 @@ func (c *workerClient) StopTask(ctx context.Context, in *StopTaskReq, opts ...gr
 	return out, nil
 }
 
-func (c *workerClient) GetContainerStat(ctx context.Context, in *GetContainerStatReq, opts ...grpc.CallOption) (*GetContainerStatRsp, error) {
-	out := new(GetContainerStatRsp)
-	err := c.cc.Invoke(ctx, Worker_GetContainerStat_FullMethodName, in, out, opts...)
+func (c *workerClient) GetTaskMetric(ctx context.Context, in *GetTaskMetricReq, opts ...grpc.CallOption) (*GetTaskMetricRsp, error) {
+	out := new(GetTaskMetricRsp)
+	err := c.cc.Invoke(ctx, Worker_GetTaskMetric_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -82,9 +81,8 @@ type WorkerServer interface {
 	StartTask(context.Context, *StartTaskReq) (*StartTaskRsp, error)
 	// 停止task
 	StopTask(context.Context, *StopTaskReq) (*StopTaskRsp, error)
-	// // 查询容器的GPU
-	// rpc GetContainerGpuStat (ContainerIdReq) returns (ContainerGpuStatRsq);
-	GetContainerStat(context.Context, *GetContainerStatReq) (*GetContainerStatRsp, error)
+	// 查询task指标
+	GetTaskMetric(context.Context, *GetTaskMetricReq) (*GetTaskMetricRsp, error)
 	mustEmbedUnimplementedWorkerServer()
 }
 
@@ -98,8 +96,8 @@ func (UnimplementedWorkerServer) StartTask(context.Context, *StartTaskReq) (*Sta
 func (UnimplementedWorkerServer) StopTask(context.Context, *StopTaskReq) (*StopTaskRsp, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method StopTask not implemented")
 }
-func (UnimplementedWorkerServer) GetContainerStat(context.Context, *GetContainerStatReq) (*GetContainerStatRsp, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetContainerStat not implemented")
+func (UnimplementedWorkerServer) GetTaskMetric(context.Context, *GetTaskMetricReq) (*GetTaskMetricRsp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetTaskMetric not implemented")
 }
 func (UnimplementedWorkerServer) mustEmbedUnimplementedWorkerServer() {}
 
@@ -150,20 +148,20 @@ func _Worker_StopTask_Handler(srv interface{}, ctx context.Context, dec func(int
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Worker_GetContainerStat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetContainerStatReq)
+func _Worker_GetTaskMetric_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetTaskMetricReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(WorkerServer).GetContainerStat(ctx, in)
+		return srv.(WorkerServer).GetTaskMetric(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Worker_GetContainerStat_FullMethodName,
+		FullMethod: Worker_GetTaskMetric_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WorkerServer).GetContainerStat(ctx, req.(*GetContainerStatReq))
+		return srv.(WorkerServer).GetTaskMetric(ctx, req.(*GetTaskMetricReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -184,10 +182,10 @@ var Worker_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Worker_StopTask_Handler,
 		},
 		{
-			MethodName: "GetContainerStat",
-			Handler:    _Worker_GetContainerStat_Handler,
+			MethodName: "GetTaskMetric",
+			Handler:    _Worker_GetTaskMetric_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "adapter/grpc/proto/worker/worker.proto",
+	Metadata: "worker.proto",
 }

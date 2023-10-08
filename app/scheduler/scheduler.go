@@ -36,26 +36,27 @@ func (obj *Monitor) getWorkerInfo(ctx context.Context, host string, port int64) 
 	}
 	defer conn.Close()
 	client := worker.NewWorkerClient(conn)
-	rsp, err := client.GetContainerStat(ctx, &worker.GetContainerStatReq{})
+	rsp, err := client.GetTaskMetric(ctx, &worker.GetTaskMetricReq{})
 	if err != nil {
 		return nil, fmt.Errorf("grpc GetContainerStat fail, %w", err)
 	}
-	cpuState := &model.CPUState{
-		CPUPercent: rsp.CpuPercent,
+	cpuStats := &model.CpuStats{
+		CPUPercent: rsp.CpuStats.Usage,
 	}
-	logger.Logger.Infof("cpuState: %+v\n", cpuState)
-	memoryState := &model.MemoryState{
-		MemoryUsed:    rsp.MemoryUsage,
-		MemoryMaxUsed: rsp.MemoryMaxUsage,
+	logger.Logger.Infof("cpuState: %+v\n", cpuStats)
+	memoryStats := &model.MemoryStats{
+		Usage: float64(rsp.MemoryStats.Usage),
+		Used:  rsp.MemoryStats.Used,
+		Free:  rsp.MemoryStats.Free,
 	}
-	logger.Logger.Infof("memoryState: %+v\n", memoryState)
-	gpuState := &model.GPUState{
+	logger.Logger.Infof("memoryState: %+v\n", memoryStats)
+	gpuStats := &model.GpuStats{
 		//TODO:GPU
 	}
 	return &model.SystemState{
-		CPUState:    cpuState,
-		MemoryState: memoryState,
-		GPUState:    gpuState,
+		CpuStats:    cpuStats,
+		MemoryStats: memoryStats,
+		GpuStats:    gpuStats,
 	}, nil
 }
 
@@ -78,8 +79,8 @@ func (obj *Monitor) GetBusyWorkerInfo(ctx context.Context) ([]*model.SystemState
 		if err != nil {
 			return nil, fmt.Errorf("grpc GetContainerStat failed: %w", err)
 		}
-		systemstate.AlgorithmName = v.RunningTask.AlgorithmName
-		systemstate.AlgorithmVersion = v.RunningTask.AlgorithmVersion
+		systemstate.AlgorithmName = v.RunningTask.Algorithm.Name
+		systemstate.AlgorithmVersion = v.RunningTask.Algorithm.Version
 		systemstate.TaskId = v.RunningTask.TaskId
 		retWorkers = append(retWorkers, systemstate)
 	}
