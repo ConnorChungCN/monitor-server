@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	interval = 500 * time.Millisecond
+	interval = 200 * time.Millisecond
 )
 
 func main() {

@@ -8,4 +8,6 @@ var (
 
 	ErrWorkerBusy = errors.New("worker is busy")
 	ErrNoInfo     = errors.New("no info need to persist")
+
+	ErrTaskFinish = errors.New("task has done")
 )

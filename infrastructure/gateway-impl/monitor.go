@@ -53,22 +53,31 @@ func (obj *MonitorGateway) StorageInfo(ctx context.Context, workers []*model.Sys
 			},
 			Timestamp: time.Now(),
 		}
-		gpuDataPoints[i] = &client.DataPoint{
-			Tags: map[string]string{
-				"AlgorithmName":    v.AlgorithmName,
-				"AlgorithmVersion": v.AlgorithmVersion,
-				"TaskId":           v.TaskId,
-			},
-			Fields: map[string]interface{}{
-				//TODO:gpu指标
-				"CudaVersion": v.GpuStats.CudaVersion,
-			},
-			Timestamp: time.Now(),
+		for j := 0; j < len(v.GpuStats.GPUsInfo); j++ {
+			gpuDataPoints[i] = &client.DataPoint{
+				Tags: map[string]string{
+					"AlgorithmName":    v.AlgorithmName,
+					"AlgorithmVersion": v.AlgorithmVersion,
+					"TaskId":           v.TaskId,
+				},
+				Fields: func() map[string]interface{} {
+					fields := make(map[string]interface{})
+					fields["CudaVersion"] = v.GpuStats.CudaVersion
+					fields[fmt.Sprintf("Id-%d", j)] = v.GpuStats.GPUsInfo[j].Id
+					fields[fmt.Sprintf("ProductName-%d", j)] = v.GpuStats.GPUsInfo[j].ProductName
+					fields[fmt.Sprintf("GpuUsage-%d", j)] = v.GpuStats.GPUsInfo[j].GpuUsage
+					fields[fmt.Sprintf("MemoryUsage-%d", j)] = v.GpuStats.GPUsInfo[j].MemoryUsage
+					fields[fmt.Sprintf("MemoryUsed-%d", j)] = v.GpuStats.GPUsInfo[j].MemoryUsed
+					fields[fmt.Sprintf("MemoryFree-%d", j)] = v.GpuStats.GPUsInfo[j].MemoryFree
+					return fields
+				}(),
+				Timestamp: time.Now(),
+			}
 		}
 	}
 	obj.InfluxDBClient.WriteData("containerCPUState", cpuDataPoints)
 	obj.InfluxDBClient.WriteData("containerMemState", memoryDataPoints)
-	// obj.InfluxDBClient.WriteData("containerGPUState", gpuDataPoints)
+	obj.InfluxDBClient.WriteData("containerGPUState", gpuDataPoints)
 	return nil
 }
 

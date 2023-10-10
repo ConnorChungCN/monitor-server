@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.3.0
 // - protoc             v3.6.1
-// source: worker.proto
+// source: worker/worker.proto
 
 // 包名
 
@@ -187,5 +187,5 @@ var Worker_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "worker.proto",
+	Metadata: "worker/worker.proto",
 }

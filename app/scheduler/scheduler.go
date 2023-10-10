@@ -13,6 +13,7 @@ import (
 	"hanglok-tech.com/monitor-server/domain/model"
 	"hanglok-tech.com/monitor-server/infrastructure/client"
 	"hanglok-tech.com/monitor-server/infrastructure/logger"
+	"hanglok-tech.com/monitor-server/infrastructure/myerrors"
 )
 
 type Monitor struct {
@@ -40,23 +41,49 @@ func (obj *Monitor) getWorkerInfo(ctx context.Context, host string, port int64) 
 	if err != nil {
 		return nil, fmt.Errorf("grpc GetContainerStat fail, %w", err)
 	}
-	cpuStats := &model.CpuStats{
-		CPUPercent: rsp.CpuStats.Usage,
+	logger.Logger.Infof("rsp: %+v", rsp)
+
+	cpuStats := rsp.GetCpuStats()
+	if cpuStats == nil {
+		return nil, myerrors.ErrTaskFinish
 	}
 	logger.Logger.Infof("cpuState: %+v\n", cpuStats)
-	memoryStats := &model.MemoryStats{
-		Usage: float64(rsp.MemoryStats.Usage),
-		Used:  rsp.MemoryStats.Used,
-		Free:  rsp.MemoryStats.Free,
+
+	memoryStats := rsp.GetMemoryStats()
+	if memoryStats == nil {
+		return nil, myerrors.ErrTaskFinish
 	}
 	logger.Logger.Infof("memoryState: %+v\n", memoryStats)
-	gpuStats := &model.GpuStats{
-		//TODO:GPU
+	gpuStats := rsp.GetGpuStats()
+	if gpuStats == nil {
+		return nil, myerrors.ErrTaskFinish
 	}
+	logger.Logger.Infof("gpuStats: %+v\n", gpuStats)
+	var gpuInfo []*model.GpuInstanceStats
+	for _, v := range gpuStats.GpuInstanceStats {
+		gpuInfo = append(gpuInfo, &model.GpuInstanceStats{
+			Id:          v.Id,
+			ProductName: v.ProductName,
+			GpuUsage:    float64(v.GpuUsage),
+			MemoryUsage: float64(v.MemoryUsage),
+			MemoryUsed:  int64(v.MemoryUsed),
+			MemoryFree:  int64(v.MemoryFree),
+		})
+	}
+
 	return &model.SystemState{
-		CpuStats:    cpuStats,
-		MemoryStats: memoryStats,
-		GpuStats:    gpuStats,
+		CpuStats: &model.CpuStats{
+			CPUPercent: cpuStats.GetUsage(),
+		},
+		MemoryStats: &model.MemoryStats{
+			Usage: float64(rsp.MemoryStats.Usage),
+			Used:  int64(rsp.MemoryStats.Used),
+			Free:  int64(rsp.MemoryStats.Free),
+		},
+		GpuStats: &model.GpuStats{
+			CudaVersion: rsp.GpuStats.CudaVersion,
+			GPUsInfo:    gpuInfo,
+		},
 	}, nil
 }
 
@@ -89,20 +116,6 @@ func (obj *Monitor) GetBusyWorkerInfo(ctx context.Context) ([]*model.SystemState
 		return nil, nil
 	}
 	return retWorkers, nil
-}
-
-func (obj *Monitor) UpdateInfo(ctx context.Context) error {
-	// 调用 GetInfo 方法获取系统指标
-	workers, err := obj.GetBusyWorkerInfo(ctx)
-	if err != nil {
-		return fmt.Errorf("GetInfo failed: %w", err)
-	}
-	// 持久化数据
-	err = obj.MonitorManager.StorageInfo(ctx, workers)
-	if err != nil {
-		return fmt.Errorf("StorageInfo failed, %w", err)
-	}
-	return nil
 }
 
 func (obj *Monitor) StartMonitoring(ctx context.Context, interval time.Duration) {

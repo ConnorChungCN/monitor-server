@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.3.0
 // - protoc             v3.6.1
-// source: scheduler.proto
+// source: scheduler/scheduler.proto
 
 // 包名
 
@@ -394,5 +394,5 @@ var Scheduler_ServiceDesc = grpc.ServiceDesc{
 			ServerStreams: true,
 		},
 	},
-	Metadata: "scheduler.proto",
+	Metadata: "scheduler/scheduler.proto",
 }

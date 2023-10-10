@@ -15,8 +15,8 @@ type CpuStats struct {
 
 type MemoryStats struct {
 	Usage float64
-	Used  uint64
-	Free  uint64
+	Used  int64
+	Free  int64
 }
 
 type GpuStats struct {
@@ -29,6 +29,6 @@ type GpuInstanceStats struct {
 	ProductName string
 	GpuUsage    float64
 	MemoryUsage float64
-	MemoryUsed  uint64
-	MemoryFree  uint64
+	MemoryUsed  int64
+	MemoryFree  int64
 }
