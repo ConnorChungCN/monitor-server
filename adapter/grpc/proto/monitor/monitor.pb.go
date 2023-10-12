@@ -389,9 +389,7 @@ type FindTaskInfoByIdRsp struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	AvgCPUPercent    float32 `protobuf:"fixed32,1,opt,name=AvgCPUPercent,proto3" json:"AvgCPUPercent,omitempty"`
-	AvgMemoryUsed    int64   `protobuf:"varint,2,opt,name=AvgMemoryUsed,proto3" json:"AvgMemoryUsed,omitempty"`
-	AvgMemoryMaxUsed int64   `protobuf:"varint,3,opt,name=AvgMemoryMaxUsed,proto3" json:"AvgMemoryMaxUsed,omitempty"`
+	CpuInquire []*CpuInquire `protobuf:"bytes,1,rep,name=cpu_inquire,json=cpuInquire,proto3" json:"cpu_inquire,omitempty"`
 }
 
 func (x *FindTaskInfoByIdRsp) Reset() {
@@ -426,23 +424,64 @@ func (*FindTaskInfoByIdRsp) Descriptor() ([]byte, []int) {
 	return file_monitor_proto_rawDescGZIP(), []int{6}
 }
 
-func (x *FindTaskInfoByIdRsp) GetAvgCPUPercent() float32 {
+func (x *FindTaskInfoByIdRsp) GetCpuInquire() []*CpuInquire {
 	if x != nil {
-		return x.AvgCPUPercent
+		return x.CpuInquire
 	}
-	return 0
+	return nil
 }
 
-func (x *FindTaskInfoByIdRsp) GetAvgMemoryUsed() int64 {
-	if x != nil {
-		return x.AvgMemoryUsed
-	}
-	return 0
+type CpuInquire struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Time       string  `protobuf:"bytes,1,opt,name=time,proto3" json:"time,omitempty"`
+	CpuPercent float32 `protobuf:"fixed32,2,opt,name=cpu_percent,json=cpuPercent,proto3" json:"cpu_percent,omitempty"`
 }
 
-func (x *FindTaskInfoByIdRsp) GetAvgMemoryMaxUsed() int64 {
+func (x *CpuInquire) Reset() {
+	*x = CpuInquire{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_monitor_proto_msgTypes[7]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *CpuInquire) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CpuInquire) ProtoMessage() {}
+
+func (x *CpuInquire) ProtoReflect() protoreflect.Message {
+	mi := &file_monitor_proto_msgTypes[7]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CpuInquire.ProtoReflect.Descriptor instead.
+func (*CpuInquire) Descriptor() ([]byte, []int) {
+	return file_monitor_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *CpuInquire) GetTime() string {
 	if x != nil {
-		return x.AvgMemoryMaxUsed
+		return x.Time
+	}
+	return ""
+}
+
+func (x *CpuInquire) GetCpuPercent() float32 {
+	if x != nil {
+		return x.CpuPercent
 	}
 	return 0
 }
@@ -492,15 +531,15 @@ var file_monitor_proto_rawDesc = []byte{
 	0x2e, 0x0a, 0x13, 0x46, 0x69, 0x6e, 0x64, 0x54, 0x61, 0x73, 0x6b, 0x49, 0x6e, 0x66, 0x6f, 0x42,
 	0x79, 0x49, 0x64, 0x52, 0x65, 0x71, 0x12, 0x17, 0x0a, 0x07, 0x74, 0x61, 0x73, 0x6b, 0x5f, 0x69,
 	0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x74, 0x61, 0x73, 0x6b, 0x49, 0x64, 0x22,
-	0x8d, 0x01, 0x0a, 0x13, 0x46, 0x69, 0x6e, 0x64, 0x54, 0x61, 0x73, 0x6b, 0x49, 0x6e, 0x66, 0x6f,
-	0x42, 0x79, 0x49, 0x64, 0x52, 0x73, 0x70, 0x12, 0x24, 0x0a, 0x0d, 0x41, 0x76, 0x67, 0x43, 0x50,
-	0x55, 0x50, 0x65, 0x72, 0x63, 0x65, 0x6e, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x02, 0x52, 0x0d,
-	0x41, 0x76, 0x67, 0x43, 0x50, 0x55, 0x50, 0x65, 0x72, 0x63, 0x65, 0x6e, 0x74, 0x12, 0x24, 0x0a,
-	0x0d, 0x41, 0x76, 0x67, 0x4d, 0x65, 0x6d, 0x6f, 0x72, 0x79, 0x55, 0x73, 0x65, 0x64, 0x18, 0x02,
-	0x20, 0x01, 0x28, 0x03, 0x52, 0x0d, 0x41, 0x76, 0x67, 0x4d, 0x65, 0x6d, 0x6f, 0x72, 0x79, 0x55,
-	0x73, 0x65, 0x64, 0x12, 0x2a, 0x0a, 0x10, 0x41, 0x76, 0x67, 0x4d, 0x65, 0x6d, 0x6f, 0x72, 0x79,
-	0x4d, 0x61, 0x78, 0x55, 0x73, 0x65, 0x64, 0x18, 0x03, 0x20, 0x01, 0x28, 0x03, 0x52, 0x10, 0x41,
-	0x76, 0x67, 0x4d, 0x65, 0x6d, 0x6f, 0x72, 0x79, 0x4d, 0x61, 0x78, 0x55, 0x73, 0x65, 0x64, 0x32,
+	0x4b, 0x0a, 0x13, 0x46, 0x69, 0x6e, 0x64, 0x54, 0x61, 0x73, 0x6b, 0x49, 0x6e, 0x66, 0x6f, 0x42,
+	0x79, 0x49, 0x64, 0x52, 0x73, 0x70, 0x12, 0x34, 0x0a, 0x0b, 0x63, 0x70, 0x75, 0x5f, 0x69, 0x6e,
+	0x71, 0x75, 0x69, 0x72, 0x65, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x13, 0x2e, 0x6d, 0x6f,
+	0x6e, 0x69, 0x74, 0x6f, 0x72, 0x2e, 0x43, 0x70, 0x75, 0x49, 0x6e, 0x71, 0x75, 0x69, 0x72, 0x65,
+	0x52, 0x0a, 0x63, 0x70, 0x75, 0x49, 0x6e, 0x71, 0x75, 0x69, 0x72, 0x65, 0x22, 0x41, 0x0a, 0x0a,
+	0x43, 0x70, 0x75, 0x49, 0x6e, 0x71, 0x75, 0x69, 0x72, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x74, 0x69,
+	0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x74, 0x69, 0x6d, 0x65, 0x12, 0x1f,
+	0x0a, 0x0b, 0x63, 0x70, 0x75, 0x5f, 0x70, 0x65, 0x72, 0x63, 0x65, 0x6e, 0x74, 0x18, 0x02, 0x20,
+	0x01, 0x28, 0x02, 0x52, 0x0a, 0x63, 0x70, 0x75, 0x50, 0x65, 0x72, 0x63, 0x65, 0x6e, 0x74, 0x32,
 	0x59, 0x0a, 0x07, 0x6d, 0x6f, 0x6e, 0x69, 0x74, 0x6f, 0x72, 0x12, 0x4e, 0x0a, 0x10, 0x46, 0x69,
 	0x6e, 0x64, 0x54, 0x61, 0x73, 0x6b, 0x49, 0x6e, 0x66, 0x6f, 0x42, 0x79, 0x49, 0x64, 0x12, 0x1c,
 	0x2e, 0x6d, 0x6f, 0x6e, 0x69, 0x74, 0x6f, 0x72, 0x2e, 0x46, 0x69, 0x6e, 0x64, 0x54, 0x61, 0x73,
@@ -526,7 +565,7 @@ func file_monitor_proto_rawDescGZIP() []byte {
 	return file_monitor_proto_rawDescData
 }
 
-var file_monitor_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_monitor_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_monitor_proto_goTypes = []interface{}{
 	(*TaskInfo)(nil),            // 0: monitor.TaskInfo
 	(*CpuStats)(nil),            // 1: monitor.CpuStats
@@ -535,19 +574,21 @@ var file_monitor_proto_goTypes = []interface{}{
 	(*GpuInstanceStats)(nil),    // 4: monitor.GpuInstanceStats
 	(*FindTaskInfoByIdReq)(nil), // 5: monitor.FindTaskInfoByIdReq
 	(*FindTaskInfoByIdRsp)(nil), // 6: monitor.FindTaskInfoByIdRsp
+	(*CpuInquire)(nil),          // 7: monitor.CpuInquire
 }
 var file_monitor_proto_depIdxs = []int32{
 	1, // 0: monitor.TaskInfo.cpu_state:type_name -> monitor.CpuStats
 	2, // 1: monitor.TaskInfo.memory_state:type_name -> monitor.MemoryStats
 	3, // 2: monitor.TaskInfo.gpu_state:type_name -> monitor.GpuStats
 	4, // 3: monitor.GpuStats.gpu_instance_stats:type_name -> monitor.GpuInstanceStats
-	5, // 4: monitor.monitor.FindTaskInfoById:input_type -> monitor.FindTaskInfoByIdReq
-	6, // 5: monitor.monitor.FindTaskInfoById:output_type -> monitor.FindTaskInfoByIdRsp
-	5, // [5:6] is the sub-list for method output_type
-	4, // [4:5] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	7, // 4: monitor.FindTaskInfoByIdRsp.cpu_inquire:type_name -> monitor.CpuInquire
+	5, // 5: monitor.monitor.FindTaskInfoById:input_type -> monitor.FindTaskInfoByIdReq
+	6, // 6: monitor.monitor.FindTaskInfoById:output_type -> monitor.FindTaskInfoByIdRsp
+	6, // [6:7] is the sub-list for method output_type
+	5, // [5:6] is the sub-list for method input_type
+	5, // [5:5] is the sub-list for extension type_name
+	5, // [5:5] is the sub-list for extension extendee
+	0, // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_monitor_proto_init() }
@@ -640,6 +681,18 @@ func file_monitor_proto_init() {
 				return nil
 			}
 		}
+		file_monitor_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*CpuInquire); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -647,7 +700,7 @@ func file_monitor_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_monitor_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

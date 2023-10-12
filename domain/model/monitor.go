@@ -1,8 +1,13 @@
 package model
 
-type Summary struct {
+type InquireResult struct {
 	TaskId           string
-	AvgCPUPercent    float32
-	AvgMemoryUsed    int64
-	AvgMemoryMaxUsed int64
+	AlgorithmName    string
+	AlgorithmVersion string
+	CpuInquireResult []*CpuInquire
+}
+
+type CpuInquire struct {
+	Time       string
+	CpuPercent float64
 }

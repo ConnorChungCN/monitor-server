@@ -14,34 +14,37 @@ message CpuStats {
     float usage = 1;
   }
   
-  message MemoryStats {
-    float usage = 1;
-    uint64 used = 2;
-    uint64 free = 3;
-  }
-  
-  message GpuStats {
-    string cuda_version = 1;
-    repeated GpuInstanceStats gpu_instance_stats = 2;
-  }
-  
-  message GpuInstanceStats {
-    string id = 1;
-    string product_name = 2;
-    float gpu_usage = 3;
-    float memory_usage = 4;
-    uint64 memory_used = 5;
-    uint64 memory_free = 6;
-  }
+message MemoryStats {
+  float usage = 1;
+  uint64 used = 2;
+  uint64 free = 3;
+}
+
+message GpuStats {
+  string cuda_version = 1;
+  repeated GpuInstanceStats gpu_instance_stats = 2;
+}
+
+message GpuInstanceStats {
+  string id = 1;
+  string product_name = 2;
+  float gpu_usage = 3;
+  float memory_usage = 4;
+  uint64 memory_used = 5;
+  uint64 memory_free = 6;
+}
 
 message FindTaskInfoByIdReq {
-    string task_id = 1;
+  string task_id = 1;
 }
 
 message FindTaskInfoByIdRsp {
-    float AvgCPUPercent = 1;
-    int64 AvgMemoryUsed = 2;
-    int64 AvgMemoryMaxUsed = 3;
+  repeated CpuInquire cpu_inquire = 1;
+}
+
+message CpuInquire {
+  string time = 1;
+  float cpu_percent = 2;
 }
 
 service monitor {

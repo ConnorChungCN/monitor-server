@@ -25,9 +25,15 @@ func (obj *MonitorServer) FindTaskInfoById(ctx context.Context, req *monitor.Fin
 	if err != nil {
 		return nil, status.Errorf(codes.Unknown, "Find Task Info By Id failed, %w", err)
 	}
+	//TODO:增加Memory、GPU
+	var cpuInquire []*monitor.CpuInquire
+	for _, i := range findResult.CpuInquireResult {
+		cpuInquire = append(cpuInquire, &monitor.CpuInquire{
+			Time:       i.Time,
+			CpuPercent: float32(i.CpuPercent),
+		})
+	}
 	return &monitor.FindTaskInfoByIdRsp{
-		AvgCPUPercent:    findResult.AvgCPUPercent,
-		AvgMemoryUsed:    findResult.AvgMemoryUsed,
-		AvgMemoryMaxUsed: findResult.AvgMemoryMaxUsed,
+		CpuInquire: cpuInquire,
 	}, nil
 }
