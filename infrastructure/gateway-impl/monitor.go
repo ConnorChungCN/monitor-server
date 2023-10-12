@@ -2,6 +2,7 @@ package gatewayimpl
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -98,12 +99,23 @@ func (obj *MonitorGateway) QuerySummary(ctx context.Context, taskId string) (*mo
 		for _, values := range cpuRsp.Results[0].Series[0].Values {
 			// values 是一个 []interface{}，其中包含了每条记录的字段值
 			// 将 values 中的字段值提取出来并进行相应的处理。values[0]是时间戳，value[1]是CPUPercent的值
-			timestamp, _ := time.Parse(time.RFC3339, values[0].(string))
-			value := values[1].(float64)
-			cpuInquire = append(cpuInquire, &model.QueryCpuInfo{
-				Time:       timestamp.String(),
-				CpuPercent: value,
-			})
+			cpuFloat, err := values[1].(json.Number).Float64()
+			if err != nil {
+				// 处理转换错误
+			} else {
+				timestamp, _ := time.Parse(time.RFC3339, values[0].(string))
+				value := cpuFloat
+				cpuInquire = append(cpuInquire, &model.QueryCpuInfo{
+					Time:       timestamp.String(),
+					CpuPercent: value,
+				})
+			}
+			// timestamp, _ := time.Parse(time.RFC3339, values[0].(string))
+			// value := values[1].(float64)
+			// cpuInquire = append(cpuInquire, &model.QueryCpuInfo{
+			// 	Time:       timestamp.String(),
+			// 	CpuPercent: value,
+			// })
 		}
 		result.CpuResult = cpuInquire
 	}
@@ -158,9 +170,15 @@ func (obj *MonitorGateway) QueryAvg(ctx context.Context, taskId string) (*model.
 		var cpuPercent []float32
 		var totalCpuPercent float32 = 0
 		for _, values := range cpuRsp.Results[0].Series[0].Values {
-			cpuPercent = append(cpuPercent, float32(values[1].(float64)))
-			totalCpuPercent += float32(values[1].(float64))
-
+			cpuFloat, err := values[1].(json.Number).Float64()
+			if err != nil {
+				// 处理转换错误
+			} else {
+				cpuPercent = append(cpuPercent, float32(cpuFloat))
+				totalCpuPercent += float32(cpuFloat)
+			}
+			// cpuPercent = append(cpuPercent, float32(values[1].(float64)))
+			// totalCpuPercent += float32(values[1].(float64))
 		}
 		result.AvgCPUPercent = totalCpuPercent / float32(len(cpuPercent))
 	}
