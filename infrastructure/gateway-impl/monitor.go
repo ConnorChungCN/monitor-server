@@ -99,28 +99,19 @@ func (obj *MonitorGateway) QuerySummary(ctx context.Context, taskId string) (*mo
 		for _, values := range cpuRsp.Results[0].Series[0].Values {
 			// values 是一个 []interface{}，其中包含了每条记录的字段值
 			// 将 values 中的字段值提取出来并进行相应的处理。values[0]是时间戳，value[1]是CPUPercent的值
-			cpuFloat, err := values[1].(json.Number).Float64()
-			if err != nil {
-				// 处理转换错误
-			} else {
-				// timestamp, _ := time.Parse(time.RFC3339, values[0].(string))
-				value := cpuFloat
-				cpuInquire = append(cpuInquire, &model.QueryCpuInfo{
-					// Time:       timestamp.String(),
-					CpuPercent: value,
-				})
-			}
-			// timestamp, _ := time.Parse(time.RFC3339, values[0].(string))
-			// value := values[1].(float64)
-			// cpuInquire = append(cpuInquire, &model.QueryCpuInfo{
-			// 	Time:       timestamp.String(),
-			// 	CpuPercent: value,
-			// })
+			cpuFloat, _ := values[1].(json.Number).Float64()
+			timeString := values[0].(json.Number).String()
+			timestamp, _ := time.Parse(time.RFC3339, timeString)
+			value := cpuFloat
+			cpuInquire = append(cpuInquire, &model.QueryCpuInfo{
+				Time:       timestamp.String(),
+				CpuPercent: value,
+			})
 		}
 		result.CpuResult = cpuInquire
 	}
 	// // 查询 containerMemoryState 中的数据
-	// memoryQueryString := fmt.Sprintf(`SELECT "MemoryFree", "MemoryUsage", "MemoryUsed" FROM containerMemoryState WHERE "TaskId"='%s'`, taskId)
+	// memoryQueryString := fmt.Sprintf(`SELECT "MemoryFree", "MemoryUsage", "MemoryUsed" FROM containerMemState WHERE "TaskId"='%s'`, taskId)
 	// memoryRsp, err := obj.InfluxDBClient.QueryData(memoryQueryString)
 	// if err != nil {
 	// 	return nil, fmt.Errorf("query failed: %w", err)
@@ -170,15 +161,9 @@ func (obj *MonitorGateway) QueryAvg(ctx context.Context, taskId string) (*model.
 		var cpuPercent []float32
 		var totalCpuPercent float32 = 0
 		for _, values := range cpuRsp.Results[0].Series[0].Values {
-			cpuFloat, err := values[1].(json.Number).Float64()
-			if err != nil {
-				// 处理转换错误
-			} else {
-				cpuPercent = append(cpuPercent, float32(cpuFloat))
-				totalCpuPercent += float32(cpuFloat)
-			}
-			// cpuPercent = append(cpuPercent, float32(values[1].(float64)))
-			// totalCpuPercent += float32(values[1].(float64))
+			cpuFloat, _ := values[1].(json.Number).Float64()
+			cpuPercent = append(cpuPercent, float32(cpuFloat))
+			totalCpuPercent += float32(cpuFloat)
 		}
 		result.AvgCPUPercent = totalCpuPercent / float32(len(cpuPercent))
 	}
@@ -196,9 +181,12 @@ func (obj *MonitorGateway) QueryAvg(ctx context.Context, taskId string) (*model.
 		var totalmemoryFree int64 = 0
 		var totalmemoryUsage float32 = 0
 		for _, values := range memoryRsp.Results[0].Series[0].Values {
-			memoryUsed = append(memoryUsed, int64(values[1].(float64)))
-			memoryFree = append(memoryFree, int64(values[2].(float64)))
-			memoryUsage = append(memoryUsage, float32(values[3].(float64)))
+			memoryUsedFloat, _ := values[1].(json.Number).Float64()
+			memoryFreeFloat, _ := values[2].(json.Number).Float64()
+			memoryUsageFloat, _ := values[3].(json.Number).Float64()
+			memoryUsed = append(memoryUsed, int64(memoryUsedFloat))
+			memoryFree = append(memoryFree, int64(memoryFreeFloat))
+			memoryUsage = append(memoryUsage, float32(memoryUsageFloat))
 			totalMemoryUsed += int64(values[1].(float64))
 			totalmemoryFree += int64(values[2].(float64))
 			totalmemoryUsage += float32(values[3].(float64))
