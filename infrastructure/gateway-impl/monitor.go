@@ -99,50 +99,50 @@ func (obj *MonitorGateway) QuerySummary(ctx context.Context, taskId string) (*mo
 		for _, values := range cpuRsp.Results[0].Series[0].Values {
 			// values 是一个 []interface{}，其中包含了每条记录的字段值
 			// 将 values 中的字段值提取出来并进行相应的处理。values[0]是时间戳，value[1]是CPUPercent的值
-			cpuFloat, _ := values[1].(json.Number).Float64()
 			timeString := values[0].(json.Number).String()
+			cpuPercentFloat, _ := values[1].(json.Number).Float64()
 			timestamp, _ := time.Parse(time.RFC3339, timeString)
-			value := cpuFloat
 			cpuInquire = append(cpuInquire, &model.QueryCpuInfo{
 				Time:       timestamp.String(),
-				CpuPercent: value,
+				CpuPercent: cpuPercentFloat,
 			})
 		}
 		result.CpuResult = cpuInquire
 	}
-	// // 查询 containerMemoryState 中的数据
-	// memoryQueryString := fmt.Sprintf(`SELECT "MemoryFree", "MemoryUsage", "MemoryUsed" FROM containerMemState WHERE "TaskId"='%s'`, taskId)
-	// memoryRsp, err := obj.InfluxDBClient.QueryData(memoryQueryString)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("query failed: %w", err)
-	// }
-	// //memoryRsp.Results[0].Series[0].Columns字段名数组
-	// //memoryRsp.Results[0].Series[0].Values是[时间, memoryUsed的值, memoryMaxUsed的值]
-	// if len(memoryRsp.Results) > 0 && len(memoryRsp.Results[0].Series) > 0 {
-	// 	var memoryUsed []int64
-	// 	var memoryMaxUsed []int64
-	// 	var totalMemoryUsed int64 = 0
-	// 	var totalmemoryMaxUsed int64 = 0
-	// 	for _, values := range memoryRsp.Results[0].Series[0].Values {
-	// 		// values 是一个 []interface{}，其中包含了每条记录的字段值
-	// 		// 将 values 中的字段值提取出来并进行相应的处理
-	// 		memoryUsed = append(memoryUsed, int64(values[1].(float64)))
-	// 		memoryMaxUsed = append(memoryMaxUsed, int64(values[2].(float64)))
-	// 		totalMemoryUsed += int64(values[1].(float64))
-	// 		totalmemoryMaxUsed += int64(values[2].(float64))
-	// 	}
-	// 	result.AvgMemoryUsed = totalMemoryUsed / int64(len(memoryUsed))
-	// 	result.AvgMemoryMaxUsed = totalmemoryMaxUsed / int64(len(memoryMaxUsed))
-	// }
-	// // 查询 containerGPUState 中的数据
+	// 查询 containerMemoryState 中的数据
+	memoryQueryString := fmt.Sprintf(`SELECT "MemoryFree", "MemoryUsage", "MemoryUsed" FROM containerMemState WHERE "TaskId"='%s'`, taskId)
+	memoryRsp, err := obj.InfluxDBClient.QueryData(memoryQueryString)
+	if err != nil {
+		return nil, fmt.Errorf("query failed: %w", err)
+	}
+	//memoryRsp.Results[0].Series[0].Columns字段名数组
+	//memoryRsp.Results[0].Series[0].Values是[时间, memoryUsed的值, memoryMaxUsed的值]
+	if len(memoryRsp.Results) > 0 && len(memoryRsp.Results[0].Series) > 0 {
+		var memInquire []*model.QueryMemInfo
+		for _, values := range memoryRsp.Results[0].Series[0].Values {
+			timeString := values[0].(json.Number).String()
+			usageFloat, _ := values[1].(json.Number).Float64()
+			usedInt, _ := values[1].(json.Number).Int64()
+			freeInt, _ := values[1].(json.Number).Int64()
+			timestamp, _ := time.Parse(time.RFC3339, timeString)
+			memInquire = append(memInquire, &model.QueryMemInfo{
+				Time:  timestamp.String(),
+				Usage: usageFloat,
+				Used:  usedInt,
+				Free:  freeInt,
+			})
+		}
+		result.MemResult = memInquire
+	}
+	// 查询 containerGPUState 中的数据
 	// gpuQueryString := fmt.Sprintf(`SELECT "CudaVersion", "AttachedGPUs" FROM containerGPUState WHERE "TaskId"='%s'`, taskId)
 	// gpuRsp, err := obj.InfluxDBClient.QueryData(gpuQueryString)
 	// if err != nil {
-	//     return nil, fmt.Errorf("query failed: %w", err)
+	// 	return nil, fmt.Errorf("query failed: %w", err)
 	// }
 	// if len(gpuRsp.Results) > 0 && len(gpuRsp.Results[0].Series) > 0 {
-	//     result.CudaVersion = gpuRsp.Results[0].Series[0].Values[0][1].(string)
-	//     result.AttachedGPUs = gpuRsp.Results[0].Series[0].Values[0][2].(string)
+	// 	result.CudaVersion = gpuRsp.Results[0].Series[0].Values[0][1].(string)
+	// 	result.AttachedGPUs = gpuRsp.Results[0].Series[0].Values[0][2].(string)
 	// }
 	return result, nil
 }
@@ -181,8 +181,8 @@ func (obj *MonitorGateway) QueryAvg(ctx context.Context, taskId string) (*model.
 		var totalmemoryFree int64 = 0
 		var totalmemoryUsage float32 = 0
 		for _, values := range memoryRsp.Results[0].Series[0].Values {
-			memoryUsedFloat, _ := values[1].(json.Number).Float64()
-			memoryFreeFloat, _ := values[2].(json.Number).Float64()
+			memoryUsedFloat, _ := values[1].(json.Number).Int64()
+			memoryFreeFloat, _ := values[2].(json.Number).Int64()
 			memoryUsageFloat, _ := values[3].(json.Number).Float64()
 			memoryUsed = append(memoryUsed, int64(memoryUsedFloat))
 			memoryFree = append(memoryFree, int64(memoryFreeFloat))

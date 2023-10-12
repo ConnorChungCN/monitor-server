@@ -13,9 +13,33 @@ type QueryAllTaskInfo struct {
 	AlgorithmName    string
 	AlgorithmVersion string
 	CpuResult        []*QueryCpuInfo
+	MemResult        []*QueryMemInfo
+	GpuResylt        []*QueryGpuInfo
 }
 
 type QueryCpuInfo struct {
 	Time       string
 	CpuPercent float64
+}
+
+type QueryMemInfo struct {
+	Time  string
+	Usage float64
+	Used  int64
+	Free  int64
+}
+
+type QueryGpuInfo struct {
+	CudaVersion string
+	GpuInstance []*GpuInstance
+}
+
+type GpuInstance struct {
+	Time        string
+	Id          string
+	ProductName string
+	GpuUsage    float64
+	MemoryUsage float64
+	MemoryUsed  int64
+	MemoryFree  int64
 }
