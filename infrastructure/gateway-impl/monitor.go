@@ -103,10 +103,10 @@ func (obj *MonitorGateway) QuerySummary(ctx context.Context, taskId string) (*mo
 			if err != nil {
 				// 处理转换错误
 			} else {
-				timestamp, _ := time.Parse(time.RFC3339, values[0].(string))
+				// timestamp, _ := time.Parse(time.RFC3339, values[0].(string))
 				value := cpuFloat
 				cpuInquire = append(cpuInquire, &model.QueryCpuInfo{
-					Time:       timestamp.String(),
+					// Time:       timestamp.String(),
 					CpuPercent: value,
 				})
 			}
