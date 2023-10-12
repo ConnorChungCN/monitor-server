@@ -81,9 +81,9 @@ func (obj *MonitorGateway) StorageInfo(ctx context.Context, workers []*model.Sys
 	return nil
 }
 
-func (obj *MonitorGateway) FindSummaryByTaskId(ctx context.Context, taskId string) (*model.InquireResult, error) {
+func (obj *MonitorGateway) QuerySummary(ctx context.Context, taskId string) (*model.QueryAllTaskInfo, error) {
 	// 初始化一个 ResultByTaskId 结构体
-	result := &model.InquireResult{
+	result := &model.QueryAllTaskInfo{
 		TaskId: taskId,
 	}
 	// 查询 containerCPUState 中的数据
@@ -94,18 +94,18 @@ func (obj *MonitorGateway) FindSummaryByTaskId(ctx context.Context, taskId strin
 		return nil, fmt.Errorf("query failed: %w", err)
 	}
 	if len(cpuRsp.Results) > 0 && len(cpuRsp.Results[0].Series) > 0 {
-		var cpuInquire []*model.CpuInquire
+		var cpuInquire []*model.QueryCpuInfo
 		for _, values := range cpuRsp.Results[0].Series[0].Values {
 			// values 是一个 []interface{}，其中包含了每条记录的字段值
 			// 将 values 中的字段值提取出来并进行相应的处理。values[0]是时间戳，value[1]是CPUPercent的值
 			timestamp, _ := time.Parse(time.RFC3339, values[0].(string))
 			value := values[1].(float64)
-			cpuInquire = append(cpuInquire, &model.CpuInquire{
+			cpuInquire = append(cpuInquire, &model.QueryCpuInfo{
 				Time:       timestamp.String(),
 				CpuPercent: value,
 			})
 		}
-		result.CpuInquireResult = cpuInquire
+		result.CpuResult = cpuInquire
 	}
 	// // 查询 containerMemoryState 中的数据
 	// memoryQueryString := fmt.Sprintf(`SELECT "MemoryFree", "MemoryUsage", "MemoryUsed" FROM containerMemoryState WHERE "TaskId"='%s'`, taskId)
@@ -127,7 +127,6 @@ func (obj *MonitorGateway) FindSummaryByTaskId(ctx context.Context, taskId strin
 	// 		memoryMaxUsed = append(memoryMaxUsed, int64(values[2].(float64)))
 	// 		totalMemoryUsed += int64(values[1].(float64))
 	// 		totalmemoryMaxUsed += int64(values[2].(float64))
-
 	// 	}
 	// 	result.AvgMemoryUsed = totalMemoryUsed / int64(len(memoryUsed))
 	// 	result.AvgMemoryMaxUsed = totalmemoryMaxUsed / int64(len(memoryMaxUsed))
@@ -142,6 +141,53 @@ func (obj *MonitorGateway) FindSummaryByTaskId(ctx context.Context, taskId strin
 	//     result.CudaVersion = gpuRsp.Results[0].Series[0].Values[0][1].(string)
 	//     result.AttachedGPUs = gpuRsp.Results[0].Series[0].Values[0][2].(string)
 	// }
+	return result, nil
+}
 
+func (obj *MonitorGateway) QueryAvg(ctx context.Context, taskId string) (*model.QueryAvgTaskInfo, error) {
+	// 初始化一个 ResultByTaskId 结构体
+	result := &model.QueryAvgTaskInfo{
+		TaskId: taskId,
+	}
+	cpuQueryString := fmt.Sprintf(`SELECT "CPUPercent" FROM containerCPUState WHERE "TaskId"='%s'`, taskId)
+	cpuRsp, err := obj.InfluxDBClient.QueryData(cpuQueryString)
+	if err != nil {
+		return nil, fmt.Errorf("query failed: %w", err)
+	}
+	if len(cpuRsp.Results) > 0 && len(cpuRsp.Results[0].Series) > 0 {
+		var cpuPercent []float32
+		var totalCpuPercent float32 = 0
+		for _, values := range cpuRsp.Results[0].Series[0].Values {
+			cpuPercent = append(cpuPercent, float32(values[1].(float64)))
+			totalCpuPercent += float32(values[1].(float64))
+
+		}
+		result.AvgCPUPercent = totalCpuPercent / float32(len(cpuPercent))
+	}
+	// 查询 containerMemoryState 中的数据
+	memoryQueryString := fmt.Sprintf(`SELECT "MemoryUsed", "MemoryFree", "MemoryUsage" FROM containerMemState WHERE "TaskId"='%s'`, taskId)
+	memoryRsp, err := obj.InfluxDBClient.QueryData(memoryQueryString)
+	if err != nil {
+		return nil, fmt.Errorf("query failed: %w", err)
+	}
+	if len(memoryRsp.Results) > 0 && len(memoryRsp.Results[0].Series) > 0 {
+		var memoryUsed []int64
+		var memoryFree []int64
+		var memoryUsage []float32
+		var totalMemoryUsed int64 = 0
+		var totalmemoryFree int64 = 0
+		var totalmemoryUsage float32 = 0
+		for _, values := range memoryRsp.Results[0].Series[0].Values {
+			memoryUsed = append(memoryUsed, int64(values[1].(float64)))
+			memoryFree = append(memoryFree, int64(values[2].(float64)))
+			memoryUsage = append(memoryUsage, float32(values[3].(float64)))
+			totalMemoryUsed += int64(values[1].(float64))
+			totalmemoryFree += int64(values[2].(float64))
+			totalmemoryUsage += float32(values[3].(float64))
+		}
+		result.AvgMemoryUsed = totalMemoryUsed / int64(len(memoryUsed))
+		result.AvgMemoryFree = totalmemoryFree / int64(len(memoryFree))
+		result.AvgMemoryUsage = totalmemoryUsage / float32(len(memoryUsage))
+	}
 	return result, nil
 }

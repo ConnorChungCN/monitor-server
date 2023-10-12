@@ -20,8 +20,17 @@ func NewExecutor(monitorManager gateway.MonitorManager) *Executor {
 	}
 }
 
-func (obj *Executor) FindTaskInfoById(ctx context.Context, taskId string) (*model.InquireResult, error) {
-	findResult, err := obj.MonitorManager.FindSummaryByTaskId(ctx, taskId)
+func (obj *Executor) QuerySummary(ctx context.Context, taskId string) (*model.QueryAllTaskInfo, error) {
+	findResult, err := obj.MonitorManager.QuerySummary(ctx, taskId)
+	if err != nil {
+		logger.Logger.Errorf("FindByTaskId fail: %s", err)
+		return nil, fmt.Errorf("FindByTaskId fail: %s", err)
+	}
+	return findResult, nil
+}
+
+func (obj *Executor) QueryAvg(ctx context.Context, taskId string) (*model.QueryAvgTaskInfo, error) {
+	findResult, err := obj.MonitorManager.QueryAvg(ctx, taskId)
 	if err != nil {
 		logger.Logger.Errorf("FindByTaskId fail: %s", err)
 		return nil, fmt.Errorf("FindByTaskId fail: %s", err)

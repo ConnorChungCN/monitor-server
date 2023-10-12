@@ -34,11 +34,11 @@ message GpuInstanceStats {
   uint64 memory_free = 6;
 }
 
-message FindTaskInfoByIdReq {
+message QueryAllTaskInfoReq {
   string task_id = 1;
 }
 
-message FindTaskInfoByIdRsp {
+message QueryAllTaskInfoRsp {
   repeated CpuInquire cpu_inquire = 1;
 }
 
@@ -47,6 +47,18 @@ message CpuInquire {
   float cpu_percent = 2;
 }
 
+message QueryAvgTaskInfoReq {
+  string task_id = 1;
+}
+
+message QueryAvgTaskInfoRsp {
+  float AvgCPUPercent = 1;
+  float AvgMemoryUsage = 2;
+	int64 AvgMemoryUsed = 3;
+	int64 AvgMemoryFree= 4 ;
+}
+
 service monitor {
-    rpc FindTaskInfoById(FindTaskInfoByIdReq) returns (FindTaskInfoByIdRsp);
+    rpc QueryAllTaskInfo(QueryAllTaskInfoReq) returns (QueryAllTaskInfoRsp);
+    rpc QueryAvgTaskInfo(QueryAvgTaskInfoReq) returns (QueryAvgTaskInfoRsp);
 }

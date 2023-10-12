@@ -54,6 +54,7 @@ func (obj *Monitor) getWorkerInfo(ctx context.Context, host string, port int64) 
 		return nil, myerrors.ErrTaskFinish
 	}
 	logger.Logger.Infof("memoryState: %+v\n", memoryStats)
+
 	gpuStats := rsp.GetGpuStats()
 	if gpuStats == nil {
 		return nil, myerrors.ErrTaskFinish
@@ -64,8 +65,8 @@ func (obj *Monitor) getWorkerInfo(ctx context.Context, host string, port int64) 
 		gpuInfo = append(gpuInfo, &model.GpuInstanceStats{
 			Id:          v.Id,
 			ProductName: v.ProductName,
-			GpuUsage:    float64(v.GpuUsage),
-			MemoryUsage: float64(v.MemoryUsage),
+			GpuUsage:    float32(v.GpuUsage),
+			MemoryUsage: float32(v.MemoryUsage),
 			MemoryUsed:  int64(v.MemoryUsed),
 			MemoryFree:  int64(v.MemoryFree),
 		})
@@ -73,15 +74,15 @@ func (obj *Monitor) getWorkerInfo(ctx context.Context, host string, port int64) 
 
 	return &model.SystemState{
 		CpuStats: &model.CpuStats{
-			CPUPercent: cpuStats.GetUsage(),
+			CPUPercent: cpuStats.Usage,
 		},
 		MemoryStats: &model.MemoryStats{
-			Usage: float64(rsp.MemoryStats.Usage),
-			Used:  int64(rsp.MemoryStats.Used),
-			Free:  int64(rsp.MemoryStats.Free),
+			Usage: float32(memoryStats.Usage),
+			Used:  int64(memoryStats.Used),
+			Free:  int64(memoryStats.Free),
 		},
 		GpuStats: &model.GpuStats{
-			CudaVersion: rsp.GpuStats.CudaVersion,
+			CudaVersion: gpuStats.CudaVersion,
 			GPUsInfo:    gpuInfo,
 		},
 	}, nil

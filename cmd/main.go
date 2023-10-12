@@ -36,7 +36,7 @@ func main() {
 	url := fmt.Sprintf("%s:%d", config.Host, config.Port)
 	svc, err := initMonitorService(config)
 	if err != nil {
-		fmt.Printf("initWorkerService error: %s", err)
+		fmt.Printf("initMonitorService error: %s", err)
 		panic(err)
 	}
 	lis, err := net.Listen("tcp", url)

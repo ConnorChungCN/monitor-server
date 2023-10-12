@@ -9,6 +9,8 @@ import (
 type MonitorManager interface {
 	//持久化数据
 	StorageInfo(ctx context.Context, workers []*model.SystemState) error
-	//查找持久化数据目前只通过taskId寻找
-	FindSummaryByTaskId(ctx context.Context, taskId string) (*model.InquireResult, error)
+	//查询所有系统指标
+	QuerySummary(ctx context.Context, taskId string) (*model.QueryAllTaskInfo, error)
+	//查询平均系统指标
+	QueryAvg(ctx context.Context, taskId string) (*model.QueryAvgTaskInfo, error)
 }
