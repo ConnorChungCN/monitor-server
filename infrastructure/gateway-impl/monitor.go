@@ -187,9 +187,9 @@ func (obj *MonitorGateway) QueryAvg(ctx context.Context, taskId string) (*model.
 			memoryUsed = append(memoryUsed, int64(memoryUsedFloat))
 			memoryFree = append(memoryFree, int64(memoryFreeFloat))
 			memoryUsage = append(memoryUsage, float32(memoryUsageFloat))
-			totalMemoryUsed += int64(values[1].(float64))
-			totalmemoryFree += int64(values[2].(float64))
-			totalmemoryUsage += float32(values[3].(float64))
+			totalMemoryUsed += memoryUsedFloat
+			totalmemoryFree += memoryFreeFloat
+			totalmemoryUsage += float32(memoryUsageFloat)
 		}
 		result.AvgMemoryUsed = totalMemoryUsed / int64(len(memoryUsed))
 		result.AvgMemoryFree = totalmemoryFree / int64(len(memoryFree))
