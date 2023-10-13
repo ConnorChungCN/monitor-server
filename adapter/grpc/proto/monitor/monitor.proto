@@ -39,12 +39,24 @@ message QueryAllTaskInfoReq {
 }
 
 message QueryAllTaskInfoRsp {
-  repeated CpuInquire cpu_inquire = 1;
+  repeated CpuQuery cpu_query = 1;
+  repeated MemQuery mem_query = 2;
 }
 
-message CpuInquire {
+message CpuQuery {
   string time = 1;
   float cpu_percent = 2;
+}
+
+message MemQuery {
+  string time = 1;
+  float mem_usage = 2;
+  int64 mem_used = 3;
+  int64 mem_free = 4;
+}
+
+message GpuQuery {
+
 }
 
 message QueryAvgTaskInfoReq {

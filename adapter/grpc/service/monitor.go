@@ -20,22 +20,31 @@ func NewMonitorServer(monitor *executor.Executor) *MonitorServer {
 	}
 }
 
-// 目前proto的定义不完善
 func (obj *MonitorServer) QueryAllTaskInfo(ctx context.Context, req *monitor.QueryAllTaskInfoReq) (*monitor.QueryAllTaskInfoRsp, error) {
 	findResult, err := obj.Monitor.QuerySummary(ctx, req.TaskId)
 	if err != nil {
 		return nil, status.Errorf(codes.Unknown, "Find Task Info By Id failed, %w", err)
 	}
 	//TODO:增加Memory、GPU
-	var cpuInquire []*monitor.CpuInquire
+	var cpuInquire []*monitor.CpuQuery
+	var memInquire []*monitor.MemQuery
 	for _, i := range findResult.CpuResult {
-		cpuInquire = append(cpuInquire, &monitor.CpuInquire{
+		cpuInquire = append(cpuInquire, &monitor.CpuQuery{
 			Time:       i.Time,
 			CpuPercent: float32(i.CpuPercent),
 		})
 	}
+	for _, i := range findResult.MemResult {
+		memInquire = append(memInquire, &monitor.MemQuery{
+			Time:     i.Time,
+			MemUsage: float32(i.Usage),
+			MemUsed:  i.Used,
+			MemFree:  i.Free,
+		})
+	}
 	return &monitor.QueryAllTaskInfoRsp{
-		CpuInquire: cpuInquire,
+		CpuQuery: cpuInquire,
+		MemQuery: memInquire,
 	}, nil
 }
 
