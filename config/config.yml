@@ -2,13 +2,9 @@ host: 0.0.0.0
 port: 8089
 
 influxdb:
-  # host: "influxdb"
-  # port: 8086
-  url: "http://127.0.0.1:8086"
-  username: "hanglok"
-  password: "hanglok8888"
-  database: "monitor_server"
+  url: "http://influxdb:8086"
+  database: "monitor"
 
 scheduler:
-  host: localhost
-  port: 8001
+  host: scheduler
+  port: 8888

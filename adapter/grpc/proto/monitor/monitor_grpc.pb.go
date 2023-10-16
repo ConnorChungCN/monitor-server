@@ -21,14 +21,16 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	Monitor_FindTaskInfoById_FullMethodName = "/monitor.monitor/FindTaskInfoById"
+	Monitor_QueryAllTaskInfo_FullMethodName = "/monitor.monitor/QueryAllTaskInfo"
+	Monitor_QueryAvgTaskInfo_FullMethodName = "/monitor.monitor/QueryAvgTaskInfo"
 )
 
 // MonitorClient is the client API for Monitor service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type MonitorClient interface {
-	FindTaskInfoById(ctx context.Context, in *FindTaskInfoByIdReq, opts ...grpc.CallOption) (*FindTaskInfoByIdRsp, error)
+	QueryAllTaskInfo(ctx context.Context, in *QueryAllTaskInfoReq, opts ...grpc.CallOption) (*QueryAllTaskInfoRsp, error)
+	QueryAvgTaskInfo(ctx context.Context, in *QueryAvgTaskInfoReq, opts ...grpc.CallOption) (*QueryAvgTaskInfoRsp, error)
 }
 
 type monitorClient struct {
@@ -39,9 +41,18 @@ func NewMonitorClient(cc grpc.ClientConnInterface) MonitorClient {
 	return &monitorClient{cc}
 }
 
-func (c *monitorClient) FindTaskInfoById(ctx context.Context, in *FindTaskInfoByIdReq, opts ...grpc.CallOption) (*FindTaskInfoByIdRsp, error) {
-	out := new(FindTaskInfoByIdRsp)
-	err := c.cc.Invoke(ctx, Monitor_FindTaskInfoById_FullMethodName, in, out, opts...)
+func (c *monitorClient) QueryAllTaskInfo(ctx context.Context, in *QueryAllTaskInfoReq, opts ...grpc.CallOption) (*QueryAllTaskInfoRsp, error) {
+	out := new(QueryAllTaskInfoRsp)
+	err := c.cc.Invoke(ctx, Monitor_QueryAllTaskInfo_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *monitorClient) QueryAvgTaskInfo(ctx context.Context, in *QueryAvgTaskInfoReq, opts ...grpc.CallOption) (*QueryAvgTaskInfoRsp, error) {
+	out := new(QueryAvgTaskInfoRsp)
+	err := c.cc.Invoke(ctx, Monitor_QueryAvgTaskInfo_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +63,8 @@ func (c *monitorClient) FindTaskInfoById(ctx context.Context, in *FindTaskInfoBy
 // All implementations must embed UnimplementedMonitorServer
 // for forward compatibility
 type MonitorServer interface {
-	FindTaskInfoById(context.Context, *FindTaskInfoByIdReq) (*FindTaskInfoByIdRsp, error)
+	QueryAllTaskInfo(context.Context, *QueryAllTaskInfoReq) (*QueryAllTaskInfoRsp, error)
+	QueryAvgTaskInfo(context.Context, *QueryAvgTaskInfoReq) (*QueryAvgTaskInfoRsp, error)
 	mustEmbedUnimplementedMonitorServer()
 }
 
@@ -60,8 +72,11 @@ type MonitorServer interface {
 type UnimplementedMonitorServer struct {
 }
 
-func (UnimplementedMonitorServer) FindTaskInfoById(context.Context, *FindTaskInfoByIdReq) (*FindTaskInfoByIdRsp, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method FindTaskInfoById not implemented")
+func (UnimplementedMonitorServer) QueryAllTaskInfo(context.Context, *QueryAllTaskInfoReq) (*QueryAllTaskInfoRsp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method QueryAllTaskInfo not implemented")
+}
+func (UnimplementedMonitorServer) QueryAvgTaskInfo(context.Context, *QueryAvgTaskInfoReq) (*QueryAvgTaskInfoRsp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method QueryAvgTaskInfo not implemented")
 }
 func (UnimplementedMonitorServer) mustEmbedUnimplementedMonitorServer() {}
 
@@ -76,20 +91,38 @@ func RegisterMonitorServer(s grpc.ServiceRegistrar, srv MonitorServer) {
 	s.RegisterService(&Monitor_ServiceDesc, srv)
 }
 
-func _Monitor_FindTaskInfoById_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(FindTaskInfoByIdReq)
+func _Monitor_QueryAllTaskInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryAllTaskInfoReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MonitorServer).FindTaskInfoById(ctx, in)
+		return srv.(MonitorServer).QueryAllTaskInfo(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Monitor_FindTaskInfoById_FullMethodName,
+		FullMethod: Monitor_QueryAllTaskInfo_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MonitorServer).FindTaskInfoById(ctx, req.(*FindTaskInfoByIdReq))
+		return srv.(MonitorServer).QueryAllTaskInfo(ctx, req.(*QueryAllTaskInfoReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Monitor_QueryAvgTaskInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryAvgTaskInfoReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MonitorServer).QueryAvgTaskInfo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Monitor_QueryAvgTaskInfo_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MonitorServer).QueryAvgTaskInfo(ctx, req.(*QueryAvgTaskInfoReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -102,8 +135,12 @@ var Monitor_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*MonitorServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "FindTaskInfoById",
-			Handler:    _Monitor_FindTaskInfoById_Handler,
+			MethodName: "QueryAllTaskInfo",
+			Handler:    _Monitor_QueryAllTaskInfo_Handler,
+		},
+		{
+			MethodName: "QueryAvgTaskInfo",
+			Handler:    _Monitor_QueryAvgTaskInfo_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

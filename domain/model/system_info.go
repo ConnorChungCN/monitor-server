@@ -4,31 +4,31 @@ type SystemState struct {
 	TaskId           string
 	AlgorithmName    string
 	AlgorithmVersion string
-	CPUState         *CPUState
-	MemoryState      *MemoryState
-	GPUState         *GPUState
+	CpuStats         *CpuStats
+	MemoryStats      *MemoryStats
+	GpuStats         *GpuStats
 }
 
-type CPUState struct {
+type CpuStats struct {
 	CPUPercent float32
 }
 
-type MemoryState struct {
-	MemoryUsed    uint64
-	MemoryMaxUsed uint64
+type MemoryStats struct {
+	Usage float32
+	Used  int64
+	Free  int64
 }
 
-type GPUState struct {
-	CudaVersion  string
-	AttachedGPUs string
-	GPUsInfo     []*GPUInfo
+type GpuStats struct {
+	CudaVersion string
+	GPUsInfo    []*GpuInstanceStats
 }
 
-type GPUInfo struct {
+type GpuInstanceStats struct {
+	Id          string
 	ProductName string
-	MemoryTotal float64
-	MemoryUsed  float64
-	MemoryFree  float64
-	GPUUsage    float64
-	MemoryUsage float64
+	GpuUsage    float32
+	MemoryUsage float32
+	MemoryUsed  int64
+	MemoryFree  int64
 }

@@ -20,14 +20,63 @@ func NewMonitorServer(monitor *executor.Executor) *MonitorServer {
 	}
 }
 
-func (obj *MonitorServer) FindTaskInfoById(ctx context.Context, req *monitor.FindTaskInfoByIdReq) (*monitor.FindTaskInfoByIdRsp, error) {
-	findResult, err := obj.Monitor.FindTaskInfoById(ctx, req.TaskId)
+func (obj *MonitorServer) QueryAllTaskInfo(ctx context.Context, req *monitor.QueryAllTaskInfoReq) (*monitor.QueryAllTaskInfoRsp, error) {
+	findResult, err := obj.Monitor.QuerySummary(ctx, req.TaskId)
 	if err != nil {
 		return nil, status.Errorf(codes.Unknown, "Find Task Info By Id failed, %w", err)
 	}
-	return &monitor.FindTaskInfoByIdRsp{
-		AvgCPUPercent:    findResult.AvgCPUPercent,
-		AvgMemoryUsed:    findResult.AvgMemoryUsed,
-		AvgMemoryMaxUsed: findResult.AvgMemoryMaxUsed,
+	//TODO:增加Memory、GPU
+	var cpuInquire []*monitor.CpuQuery
+	var memInquire []*monitor.MemQuery
+	var gpuInquire []*monitor.GpuQuery
+	for _, i := range findResult.CpuResult {
+		cpuInquire = append(cpuInquire, &monitor.CpuQuery{
+			Time:       i.Time,
+			CpuPercent: float32(i.CpuPercent),
+		})
+	}
+	for _, i := range findResult.MemResult {
+		memInquire = append(memInquire, &monitor.MemQuery{
+			Time:     i.Time,
+			MemUsage: float32(i.Usage),
+			MemUsed:  i.Used,
+			MemFree:  i.Free,
+		})
+	}
+	//GPU proto rsp
+	for _, i := range findResult.GpuResult {
+		gpuInquire = append(gpuInquire, &monitor.GpuQuery{
+			Time:        i.Time,
+			Id:          i.Id,
+			ProdctName:  i.ProductName,
+			GpuUsage:    float32(i.GpuUsage),
+			GpuMemUsage: float32(i.MemoryUsage),
+			GpuMemUsed:  i.MemoryUsed,
+			GpuMemFree:  i.MemoryFree,
+		})
+	}
+	return &monitor.QueryAllTaskInfoRsp{
+		CpuQuery: cpuInquire,
+		MemQuery: memInquire,
+		GpuQuery: gpuInquire,
+	}, nil
+}
+
+func (obj *MonitorServer) QueryAvgTaskInfo(ctx context.Context, req *monitor.QueryAvgTaskInfoReq) (*monitor.QueryAvgTaskInfoRsp, error) {
+	findResult, err := obj.Monitor.QueryAvg(ctx, req.TaskId)
+	if err != nil {
+		return nil, status.Errorf(codes.Unknown, "Find Task Info By Id failed, %w", err)
+	}
+	return &monitor.QueryAvgTaskInfoRsp{
+		AvgCPUPercent: findResult.AvgCPUPercent,
+
+		AvgMemoryUsage: findResult.AvgMemoryUsage,
+		AvgMemoryUsed:  findResult.AvgMemoryUsed,
+		AvgMemoryFree:  findResult.AvgMemoryFree,
+
+		AvgGpuUsage:       findResult.AvgGpuUsage,
+		AvgGpuMemoryUsage: findResult.AvgGpuMemoryUsage,
+		AvgGpuMemoryUsed:  findResult.AvgGpuMemoryUsed,
+		AvgGpuMemoryFree:  findResult.AvgGpuMemoryFree,
 	}, nil
 }

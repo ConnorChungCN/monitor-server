@@ -21,13 +21,14 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	Scheduler_ListWorkers_FullMethodName    = "/scheduler.Scheduler/ListWorkers"
-	Scheduler_RegistetWorker_FullMethodName = "/scheduler.Scheduler/RegistetWorker"
-	Scheduler_StartTask_FullMethodName      = "/scheduler.Scheduler/StartTask"
-	Scheduler_StopTask_FullMethodName       = "/scheduler.Scheduler/StopTask"
-	Scheduler_GetTask_FullMethodName        = "/scheduler.Scheduler/GetTask"
-	Scheduler_ListTask_FullMethodName       = "/scheduler.Scheduler/ListTask"
-	Scheduler_SetTaskResult_FullMethodName  = "/scheduler.Scheduler/SetTaskResult"
+	Scheduler_ListWorkers_FullMethodName         = "/scheduler.Scheduler/ListWorkers"
+	Scheduler_RegistetWorker_FullMethodName      = "/scheduler.Scheduler/RegistetWorker"
+	Scheduler_StartTask_FullMethodName           = "/scheduler.Scheduler/StartTask"
+	Scheduler_StopTask_FullMethodName            = "/scheduler.Scheduler/StopTask"
+	Scheduler_GetTask_FullMethodName             = "/scheduler.Scheduler/GetTask"
+	Scheduler_ListTask_FullMethodName            = "/scheduler.Scheduler/ListTask"
+	Scheduler_SetTaskResult_FullMethodName       = "/scheduler.Scheduler/SetTaskResult"
+	Scheduler_SubscribeTaskResult_FullMethodName = "/scheduler.Scheduler/SubscribeTaskResult"
 )
 
 // SchedulerClient is the client API for Scheduler service.
@@ -41,6 +42,7 @@ type SchedulerClient interface {
 	GetTask(ctx context.Context, in *GetTaskReq, opts ...grpc.CallOption) (*GetTaskRsp, error)
 	ListTask(ctx context.Context, in *ListTaskReq, opts ...grpc.CallOption) (*ListTaskRsp, error)
 	SetTaskResult(ctx context.Context, in *SetTaskResultReq, opts ...grpc.CallOption) (*SetTaskResultRsp, error)
+	SubscribeTaskResult(ctx context.Context, in *SubscribeTaskResultReq, opts ...grpc.CallOption) (Scheduler_SubscribeTaskResultClient, error)
 }
 
 type schedulerClient struct {
@@ -114,6 +116,38 @@ func (c *schedulerClient) SetTaskResult(ctx context.Context, in *SetTaskResultRe
 	return out, nil
 }
 
+func (c *schedulerClient) SubscribeTaskResult(ctx context.Context, in *SubscribeTaskResultReq, opts ...grpc.CallOption) (Scheduler_SubscribeTaskResultClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Scheduler_ServiceDesc.Streams[0], Scheduler_SubscribeTaskResult_FullMethodName, opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &schedulerSubscribeTaskResultClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Scheduler_SubscribeTaskResultClient interface {
+	Recv() (*SubscribeTaskResultRsp, error)
+	grpc.ClientStream
+}
+
+type schedulerSubscribeTaskResultClient struct {
+	grpc.ClientStream
+}
+
+func (x *schedulerSubscribeTaskResultClient) Recv() (*SubscribeTaskResultRsp, error) {
+	m := new(SubscribeTaskResultRsp)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // SchedulerServer is the server API for Scheduler service.
 // All implementations must embed UnimplementedSchedulerServer
 // for forward compatibility
@@ -125,6 +159,7 @@ type SchedulerServer interface {
 	GetTask(context.Context, *GetTaskReq) (*GetTaskRsp, error)
 	ListTask(context.Context, *ListTaskReq) (*ListTaskRsp, error)
 	SetTaskResult(context.Context, *SetTaskResultReq) (*SetTaskResultRsp, error)
+	SubscribeTaskResult(*SubscribeTaskResultReq, Scheduler_SubscribeTaskResultServer) error
 	mustEmbedUnimplementedSchedulerServer()
 }
 
@@ -152,6 +187,9 @@ func (UnimplementedSchedulerServer) ListTask(context.Context, *ListTaskReq) (*Li
 }
 func (UnimplementedSchedulerServer) SetTaskResult(context.Context, *SetTaskResultReq) (*SetTaskResultRsp, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetTaskResult not implemented")
+}
+func (UnimplementedSchedulerServer) SubscribeTaskResult(*SubscribeTaskResultReq, Scheduler_SubscribeTaskResultServer) error {
+	return status.Errorf(codes.Unimplemented, "method SubscribeTaskResult not implemented")
 }
 func (UnimplementedSchedulerServer) mustEmbedUnimplementedSchedulerServer() {}
 
@@ -292,6 +330,27 @@ func _Scheduler_SetTaskResult_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Scheduler_SubscribeTaskResult_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(SubscribeTaskResultReq)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(SchedulerServer).SubscribeTaskResult(m, &schedulerSubscribeTaskResultServer{stream})
+}
+
+type Scheduler_SubscribeTaskResultServer interface {
+	Send(*SubscribeTaskResultRsp) error
+	grpc.ServerStream
+}
+
+type schedulerSubscribeTaskResultServer struct {
+	grpc.ServerStream
+}
+
+func (x *schedulerSubscribeTaskResultServer) Send(m *SubscribeTaskResultRsp) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 // Scheduler_ServiceDesc is the grpc.ServiceDesc for Scheduler service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -328,6 +387,12 @@ var Scheduler_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Scheduler_SetTaskResult_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "SubscribeTaskResult",
+			Handler:       _Scheduler_SubscribeTaskResult_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: "scheduler/scheduler.proto",
 }
