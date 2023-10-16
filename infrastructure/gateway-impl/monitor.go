@@ -143,8 +143,8 @@ func (obj *MonitorGateway) QuerySummary(ctx context.Context, taskId string) (*mo
 		var GpuInquire []*model.QueryGpuInfo
 		for _, values := range gpuRsp.Results[0].Series[0].Values {
 			timeString := values[0].(json.Number).String()
-			idString := values[1].(json.Number).String()
-			ProductNameString := values[2].(json.Number).String()
+			idString := values[1].(string)
+			ProductNameString := values[2].(string)
 			GpuUsageFloat, _ := values[3].(json.Number).Float64()
 			MemoryUsageFloat, _ := values[4].(json.Number).Float64()
 			MemoryUsedInt, _ := values[5].(json.Number).Int64()

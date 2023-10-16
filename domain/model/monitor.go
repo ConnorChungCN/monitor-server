@@ -16,12 +16,10 @@ type QueryAvgTaskInfo struct {
 }
 
 type QueryAllTaskInfo struct {
-	TaskId           string
-	AlgorithmName    string
-	AlgorithmVersion string
-	CpuResult        []*QueryCpuInfo
-	MemResult        []*QueryMemInfo
-	GpuResult        []*QueryGpuInfo
+	TaskId    string
+	CpuResult []*QueryCpuInfo
+	MemResult []*QueryMemInfo
+	GpuResult []*QueryGpuInfo
 }
 
 type QueryCpuInfo struct {
