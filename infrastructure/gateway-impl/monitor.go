@@ -26,11 +26,12 @@ func (obj *MonitorGateway) StorageInfo(ctx context.Context, workers []*model.Sys
 	if workers == nil {
 		return nil
 	}
-	cpuDataPoints := make([]*client.DataPoint, len(workers))
-	memoryDataPoints := make([]*client.DataPoint, len(workers))
-	gpuDataPoints := make([]*client.DataPoint, len(workers))
-	for i, v := range workers {
-		cpuDataPoints[i] = &client.DataPoint{
+	cpuDataPoints := make([]*client.DataPoint, 0)
+	memoryDataPoints := make([]*client.DataPoint, 0)
+	gpuDataPoints := make([]*client.DataPoint, 0)
+	for _, v := range workers {
+		timeStamp := time.Now()
+		cpuDataPoints = append(cpuDataPoints, &client.DataPoint{
 			Tags: map[string]string{
 				"AlgorithmName":    v.AlgorithmName,
 				"AlgorithmVersion": v.AlgorithmVersion,
@@ -39,9 +40,9 @@ func (obj *MonitorGateway) StorageInfo(ctx context.Context, workers []*model.Sys
 			Fields: map[string]interface{}{
 				"CPUPercent": v.CpuStats.CPUPercent,
 			},
-			Timestamp: time.Now(),
-		}
-		memoryDataPoints[i] = &client.DataPoint{
+			Timestamp: timeStamp,
+		})
+		memoryDataPoints = append(memoryDataPoints, &client.DataPoint{
 			Tags: map[string]string{
 				"AlgorithmName":    v.AlgorithmName,
 				"AlgorithmVersion": v.AlgorithmVersion,
@@ -52,28 +53,26 @@ func (obj *MonitorGateway) StorageInfo(ctx context.Context, workers []*model.Sys
 				"MemoryUsed":  v.MemoryStats.Used,
 				"MemoryFree":  v.MemoryStats.Free,
 			},
-			Timestamp: time.Now(),
-		}
-		for j := 0; j < len(v.GpuStats.GPUsInfo); j++ {
-			gpuDataPoints[i] = &client.DataPoint{
+			Timestamp: timeStamp,
+		})
+		for _, gpuInfo := range v.GpuStats.GPUsInfo {
+			gpuDataPoints = append(gpuDataPoints, &client.DataPoint{
 				Tags: map[string]string{
 					"AlgorithmName":    v.AlgorithmName,
 					"AlgorithmVersion": v.AlgorithmVersion,
 					"TaskId":           v.TaskId,
+					"CudaVersion":      v.GpuStats.CudaVersion,
 				},
-				Fields: func() map[string]interface{} {
-					fields := make(map[string]interface{})
-					fields["CudaVersion"] = v.GpuStats.CudaVersion
-					fields[fmt.Sprintf("Id-%d", j)] = v.GpuStats.GPUsInfo[j].Id
-					fields[fmt.Sprintf("ProductName-%d", j)] = v.GpuStats.GPUsInfo[j].ProductName
-					fields[fmt.Sprintf("GpuUsage-%d", j)] = v.GpuStats.GPUsInfo[j].GpuUsage
-					fields[fmt.Sprintf("MemoryUsage-%d", j)] = v.GpuStats.GPUsInfo[j].MemoryUsage
-					fields[fmt.Sprintf("MemoryUsed-%d", j)] = v.GpuStats.GPUsInfo[j].MemoryUsed
-					fields[fmt.Sprintf("MemoryFree-%d", j)] = v.GpuStats.GPUsInfo[j].MemoryFree
-					return fields
-				}(),
-				Timestamp: time.Now(),
-			}
+				Fields: map[string]interface{}{
+					"Id":          gpuInfo.Id,
+					"ProductName": gpuInfo.ProductName,
+					"GpuUsage":    gpuInfo.GpuUsage,
+					"MemoryUsage": gpuInfo.MemoryUsage,
+					"MemoryUsed":  gpuInfo.MemoryUsed,
+					"MemoryFree":  gpuInfo.MemoryFree,
+				},
+				Timestamp: timeStamp,
+			})
 		}
 	}
 	obj.InfluxDBClient.WriteData("containerCPUState", cpuDataPoints)
@@ -110,7 +109,7 @@ func (obj *MonitorGateway) QuerySummary(ctx context.Context, taskId string) (*mo
 		result.CpuResult = cpuInquire
 	}
 	// 查询 containerMemoryState 中的数据
-	memoryQueryString := fmt.Sprintf(`SELECT "MemoryFree", "MemoryUsage", "MemoryUsed" FROM containerMemState WHERE "TaskId"='%s'`, taskId)
+	memoryQueryString := fmt.Sprintf(`SELECT "MemoryUsage", "MemoryUsed", "MemoryFree" FROM containerMemState WHERE "TaskId"='%s'`, taskId)
 	memoryRsp, err := obj.InfluxDBClient.QueryData(memoryQueryString)
 	if err != nil {
 		return nil, fmt.Errorf("query failed: %w", err)
@@ -122,8 +121,8 @@ func (obj *MonitorGateway) QuerySummary(ctx context.Context, taskId string) (*mo
 		for _, values := range memoryRsp.Results[0].Series[0].Values {
 			timeString := values[0].(json.Number).String()
 			usageFloat, _ := values[1].(json.Number).Float64()
-			usedInt, _ := values[1].(json.Number).Int64()
-			freeInt, _ := values[1].(json.Number).Int64()
+			usedInt, _ := values[2].(json.Number).Int64()
+			freeInt, _ := values[3].(json.Number).Int64()
 			timestamp, _ := time.Parse(time.RFC3339, timeString)
 			memInquire = append(memInquire, &model.QueryMemInfo{
 				Time:  timestamp.String(),
@@ -135,15 +134,33 @@ func (obj *MonitorGateway) QuerySummary(ctx context.Context, taskId string) (*mo
 		result.MemResult = memInquire
 	}
 	// 查询 containerGPUState 中的数据
-	// gpuQueryString := fmt.Sprintf(`SELECT "CudaVersion", "AttachedGPUs" FROM containerGPUState WHERE "TaskId"='%s'`, taskId)
-	// gpuRsp, err := obj.InfluxDBClient.QueryData(gpuQueryString)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("query failed: %w", err)
-	// }
-	// if len(gpuRsp.Results) > 0 && len(gpuRsp.Results[0].Series) > 0 {
-	// 	result.CudaVersion = gpuRsp.Results[0].Series[0].Values[0][1].(string)
-	// 	result.AttachedGPUs = gpuRsp.Results[0].Series[0].Values[0][2].(string)
-	// }
+	gpuQueryString := fmt.Sprintf(`SELECT "Id", "ProductName", "GpuUsage", "MemoryUsage", "MemoryUsed", "MemoryFree" FROM containerGPUState WHERE "TaskId"='%s'`, taskId)
+	gpuRsp, err := obj.InfluxDBClient.QueryData(gpuQueryString)
+	if err != nil {
+		return nil, fmt.Errorf("query failed: %w", err)
+	}
+	if len(gpuRsp.Results) > 0 && len(gpuRsp.Results[0].Series) > 0 {
+		var GpuInquire []*model.QueryGpuInfo
+		for _, values := range gpuRsp.Results[0].Series[0].Values {
+			timeString := values[0].(json.Number).String()
+			idString := values[1].(json.Number).String()
+			ProductNameString := values[2].(json.Number).String()
+			GpuUsageFloat, _ := values[3].(json.Number).Float64()
+			MemoryUsageFloat, _ := values[4].(json.Number).Float64()
+			MemoryUsedInt, _ := values[5].(json.Number).Int64()
+			MemoryFreeInt, _ := values[6].(json.Number).Int64()
+			GpuInquire = append(GpuInquire, &model.QueryGpuInfo{
+				Time:        timeString,
+				Id:          idString,
+				ProductName: ProductNameString,
+				GpuUsage:    GpuUsageFloat,
+				MemoryUsage: MemoryUsageFloat,
+				MemoryUsed:  MemoryUsedInt,
+				MemoryFree:  MemoryFreeInt,
+			})
+		}
+		result.GpuResult = GpuInquire
+	}
 	return result, nil
 }
 
@@ -167,7 +184,7 @@ func (obj *MonitorGateway) QueryAvg(ctx context.Context, taskId string) (*model.
 		}
 		result.AvgCPUPercent = totalCpuPercent / float32(len(cpuPercent))
 	}
-	// 查询 containerMemoryState 中的数据
+	// 查询 containerMemState 中的数据
 	memoryQueryString := fmt.Sprintf(`SELECT "MemoryUsed", "MemoryFree", "MemoryUsage" FROM containerMemState WHERE "TaskId"='%s'`, taskId)
 	memoryRsp, err := obj.InfluxDBClient.QueryData(memoryQueryString)
 	if err != nil {
@@ -194,6 +211,42 @@ func (obj *MonitorGateway) QueryAvg(ctx context.Context, taskId string) (*model.
 		result.AvgMemoryUsed = totalMemoryUsed / int64(len(memoryUsed))
 		result.AvgMemoryFree = totalmemoryFree / int64(len(memoryFree))
 		result.AvgMemoryUsage = totalmemoryUsage / float32(len(memoryUsage))
+	}
+	// 查询 containerGPUState 中的数据
+	gpuQueryString := fmt.Sprintf(`SELECT "GpuUsage", "MemoryUsage", "MemoryUsed", "MemoryFree" FROM containerGPUState WHERE "TaskId"='%s'`, taskId)
+	gpuRsp, err := obj.InfluxDBClient.QueryData(gpuQueryString)
+	if err != nil {
+		return nil, fmt.Errorf("query failed: %w", err)
+	}
+	if len(gpuRsp.Results) > 0 && len(gpuRsp.Results[0].Series) > 0 {
+		var gpuUsage []float32
+		var gpuMemoryUsed []int64
+		var gpuMemoryFree []int64
+		var gpuemoryUsage []float32
+		var totalGpuUsage float32 = 0
+		var totalGpuMemoryUsed int64 = 0
+		var totalGpumemoryFree int64 = 0
+		var totalGpumemoryUsage float32 = 0
+		for _, values := range gpuRsp.Results[0].Series[0].Values {
+			GpuUsageFloat, _ := values[1].(json.Number).Float64()
+			GpuMemoryUsageFloat, _ := values[2].(json.Number).Float64()
+			GpuMemoryUsedInt, _ := values[3].(json.Number).Int64()
+			GpuMemoryFreeInt, _ := values[4].(json.Number).Int64()
+
+			gpuUsage = append(gpuUsage, float32(GpuUsageFloat))
+			gpuemoryUsage = append(gpuemoryUsage, float32(GpuMemoryUsageFloat))
+			gpuMemoryUsed = append(gpuMemoryUsed, int64(GpuMemoryUsedInt))
+			gpuMemoryFree = append(gpuMemoryFree, int64(GpuMemoryFreeInt))
+
+			totalGpuUsage += float32(GpuUsageFloat)
+			totalGpumemoryUsage += float32(GpuMemoryUsageFloat)
+			totalGpuMemoryUsed += GpuMemoryUsedInt
+			totalGpumemoryFree += GpuMemoryFreeInt
+		}
+		result.AvgGpuUsage = totalGpuUsage / float32(len(gpuUsage))
+		result.AvgGpuMemoryUsage = totalGpumemoryUsage / float32(len(gpuemoryUsage))
+		result.AvgGpuMemoryUsed = totalGpuMemoryUsed / int64(len(gpuMemoryUsed))
+		result.AvgGpuMemoryFree = totalGpumemoryFree / int64(len(gpuMemoryFree))
 	}
 	return result, nil
 }

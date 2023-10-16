@@ -1,11 +1,18 @@
 package model
 
 type QueryAvgTaskInfo struct {
-	TaskId         string
-	AvgCPUPercent  float32
-	AvgMemoryUsage float32
-	AvgMemoryUsed  int64
-	AvgMemoryFree  int64
+	TaskId           string
+	AlgorithmName    string
+	AlgorithmVersion string
+	AvgCPUPercent    float32
+	AvgMemoryUsage   float32
+	AvgMemoryUsed    int64
+	AvgMemoryFree    int64
+
+	AvgGpuUsage       float32
+	AvgGpuMemoryUsage float32
+	AvgGpuMemoryUsed  int64
+	AvgGpuMemoryFree  int64
 }
 
 type QueryAllTaskInfo struct {
@@ -14,7 +21,7 @@ type QueryAllTaskInfo struct {
 	AlgorithmVersion string
 	CpuResult        []*QueryCpuInfo
 	MemResult        []*QueryMemInfo
-	GpuResylt        []*QueryGpuInfo
+	GpuResult        []*QueryGpuInfo
 }
 
 type QueryCpuInfo struct {
@@ -30,8 +37,13 @@ type QueryMemInfo struct {
 }
 
 type QueryGpuInfo struct {
-	CudaVersion string
-	GpuInstance []*GpuInstance
+	Time        string
+	Id          string
+	ProductName string
+	GpuUsage    float64
+	MemoryUsage float64
+	MemoryUsed  int64
+	MemoryFree  int64
 }
 
 type GpuInstance struct {
