@@ -98,9 +98,9 @@ func (obj *MonitorGateway) QuerySummary(ctx context.Context, taskId string) (*mo
 		for _, values := range cpuRsp.Results[0].Series[0].Values {
 			// values 是一个 []interface{}，其中包含了每条记录的字段值
 			// 将 values 中的字段值提取出来并进行相应的处理。values[0]是时间戳，value[1]是CPUPercent的值
-			timeString := values[0].(json.Number).String()
+			timeInt, _ := values[0].(json.Number).Int64()
+			timestamp := time.Unix(timeInt, 0)
 			cpuPercentFloat, _ := values[1].(json.Number).Float64()
-			timestamp, _ := time.Parse(time.RFC3339, timeString)
 			cpuInquire = append(cpuInquire, &model.QueryCpuInfo{
 				Time:       timestamp.String(),
 				CpuPercent: cpuPercentFloat,
@@ -119,11 +119,11 @@ func (obj *MonitorGateway) QuerySummary(ctx context.Context, taskId string) (*mo
 	if len(memoryRsp.Results) > 0 && len(memoryRsp.Results[0].Series) > 0 {
 		var memInquire []*model.QueryMemInfo
 		for _, values := range memoryRsp.Results[0].Series[0].Values {
-			timeString := values[0].(json.Number).String()
+			timeInt, _ := values[0].(json.Number).Int64()
+			timestamp := time.Unix(timeInt, 0)
 			usageFloat, _ := values[1].(json.Number).Float64()
 			usedInt, _ := values[2].(json.Number).Int64()
 			freeInt, _ := values[3].(json.Number).Int64()
-			timestamp, _ := time.Parse(time.RFC3339, timeString)
 			memInquire = append(memInquire, &model.QueryMemInfo{
 				Time:  timestamp.String(),
 				Usage: usageFloat,
@@ -142,7 +142,8 @@ func (obj *MonitorGateway) QuerySummary(ctx context.Context, taskId string) (*mo
 	if len(gpuRsp.Results) > 0 && len(gpuRsp.Results[0].Series) > 0 {
 		var GpuInquire []*model.QueryGpuInfo
 		for _, values := range gpuRsp.Results[0].Series[0].Values {
-			timeString := values[0].(json.Number).String()
+			timeInt, _ := values[0].(json.Number).Int64()
+			timestamp := time.Unix(timeInt, 0)
 			idString := values[1].(string)
 			ProductNameString := values[2].(string)
 			GpuUsageFloat, _ := values[3].(json.Number).Float64()
@@ -150,7 +151,7 @@ func (obj *MonitorGateway) QuerySummary(ctx context.Context, taskId string) (*mo
 			MemoryUsedInt, _ := values[5].(json.Number).Int64()
 			MemoryFreeInt, _ := values[6].(json.Number).Int64()
 			GpuInquire = append(GpuInquire, &model.QueryGpuInfo{
-				Time:        timeString,
+				Time:        timestamp.String(),
 				Id:          idString,
 				ProductName: ProductNameString,
 				GpuUsage:    GpuUsageFloat,
