@@ -28,6 +28,7 @@ func (obj *MonitorServer) QueryAllTaskInfo(ctx context.Context, req *monitor.Que
 	//TODO:增加Memory、GPU
 	var cpuInquire []*monitor.CpuQuery
 	var memInquire []*monitor.MemQuery
+	var gpuInquire []*monitor.GpuQuery
 	for _, i := range findResult.CpuResult {
 		cpuInquire = append(cpuInquire, &monitor.CpuQuery{
 			Time:       i.Time,
@@ -42,9 +43,22 @@ func (obj *MonitorServer) QueryAllTaskInfo(ctx context.Context, req *monitor.Que
 			MemFree:  i.Free,
 		})
 	}
+	//GPU proto rsp
+	for _, i := range findResult.GpuResult {
+		gpuInquire = append(gpuInquire, &monitor.GpuQuery{
+			Time:        i.Time,
+			Id:          i.Id,
+			ProdctName:  i.ProductName,
+			GpuUsage:    float32(i.GpuUsage),
+			GpuMemUsage: float32(i.MemoryUsage),
+			GpuMemUsed:  i.MemoryUsed,
+			GpuMemFree:  i.MemoryFree,
+		})
+	}
 	return &monitor.QueryAllTaskInfoRsp{
 		CpuQuery: cpuInquire,
 		MemQuery: memInquire,
+		GpuQuery: gpuInquire,
 	}, nil
 }
 
@@ -53,11 +67,16 @@ func (obj *MonitorServer) QueryAvgTaskInfo(ctx context.Context, req *monitor.Que
 	if err != nil {
 		return nil, status.Errorf(codes.Unknown, "Find Task Info By Id failed, %w", err)
 	}
-	//TODO:增加Memory、GPU
 	return &monitor.QueryAvgTaskInfoRsp{
-		AvgCPUPercent:  findResult.AvgCPUPercent,
+		AvgCPUPercent: findResult.AvgCPUPercent,
+
 		AvgMemoryUsage: findResult.AvgMemoryUsage,
 		AvgMemoryUsed:  findResult.AvgMemoryUsed,
 		AvgMemoryFree:  findResult.AvgMemoryFree,
+
+		AvgGpuUsage:       findResult.AvgGpuUsage,
+		AvgGpuMemoryUsage: findResult.AvgGpuMemoryUsage,
+		AvgGpuMemoryUsed:  findResult.AvgGpuMemoryUsed,
+		AvgGpuMemoryFree:  findResult.AvgGpuMemoryFree,
 	}, nil
 }

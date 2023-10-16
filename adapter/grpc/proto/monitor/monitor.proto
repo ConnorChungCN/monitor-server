@@ -41,6 +41,7 @@ message QueryAllTaskInfoReq {
 message QueryAllTaskInfoRsp {
   repeated CpuQuery cpu_query = 1;
   repeated MemQuery mem_query = 2;
+  repeated GpuQuery gpu_query = 3;
 }
 
 message CpuQuery {
@@ -56,7 +57,13 @@ message MemQuery {
 }
 
 message GpuQuery {
-
+  string time = 1;
+  string id = 2;
+  string prodct_name = 3;
+  float gpu_usage = 4;
+  float gpu_mem_usage = 5;
+  int64 gpu_mem_used = 6;
+  int64 gpu_mem_free = 7;
 }
 
 message QueryAvgTaskInfoReq {
@@ -65,9 +72,15 @@ message QueryAvgTaskInfoReq {
 
 message QueryAvgTaskInfoRsp {
   float AvgCPUPercent = 1;
+
   float AvgMemoryUsage = 2;
 	int64 AvgMemoryUsed = 3;
 	int64 AvgMemoryFree= 4 ;
+
+  float AvgGpuUsage = 5;
+  float AvgGpuMemoryUsage = 6;
+	int64 AvgGpuMemoryUsed = 7;
+	int64 AvgGpuMemoryFree= 8 ;
 }
 
 service monitor {
