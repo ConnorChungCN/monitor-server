@@ -1,0 +1,3 @@
+[submodule "adapter/grpc/proto"]
+	path = adapter/grpc/proto
+	url = ssh://git@hanglok-tech-repo.com:1022/hanglok-tech/algorithm-platform/grpc-proto.git
