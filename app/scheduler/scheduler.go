@@ -16,27 +16,85 @@ import (
 	"hanglok-tech.com/monitor-server/infrastructure/myerrors"
 )
 
+// 客户端连接失活时间5分钟
+const WorkerClientTimeout = 60 * 5
+
+type WorkerClient struct {
+	conn         *grpc.ClientConn
+	useTimestamp int64
+	worker.WorkerClient
+}
+
+func NewWorkerClient(url string) (*WorkerClient, error) {
+	conn, err := grpc.Dial(url, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return nil, fmt.Errorf("connect to worker rpc server failed, %w", err)
+	}
+	client := worker.NewWorkerClient(conn)
+	return &WorkerClient{
+		conn:         conn,
+		useTimestamp: time.Now().Unix(),
+		WorkerClient: client,
+	}, nil
+}
+
+func (cli *WorkerClient) Close() error {
+	return cli.conn.Close()
+}
+
+func (cli *WorkerClient) IsTooOld(sec int64) bool {
+	return time.Now().Unix()-cli.useTimestamp > sec
+}
+
+func (cli *WorkerClient) UpdateTimestamp() {
+	cli.useTimestamp = time.Now().Unix()
+}
+
 type Monitor struct {
 	MonitorManager  gateway.MonitorManager
 	SchedulerClient *client.SchedulerClient
+	workerClients   map[string]*WorkerClient
 }
 
 func NewMonitor(monitorManager gateway.MonitorManager, schedulerClient *client.SchedulerClient) *Monitor {
 	return &Monitor{
 		MonitorManager:  monitorManager,
 		SchedulerClient: schedulerClient,
+		workerClients:   make(map[string]*WorkerClient),
 	}
+}
+
+func (obj *Monitor) getWorkerClient(ctx context.Context, url string) (*WorkerClient, error) {
+	// 清理太久没用的client
+	for k, c := range obj.workerClients {
+		if c.IsTooOld(WorkerClientTimeout) {
+			c.Close()
+			delete(obj.workerClients, k)
+		}
+	}
+	// 尝试获取
+	cli, ok := obj.workerClients[url]
+	if ok {
+		cli.UpdateTimestamp()
+		return cli, nil
+	}
+	cli, err := NewWorkerClient(url)
+	if err != nil {
+		return nil, fmt.Errorf("new worker client failed, %w", err)
+	}
+	obj.workerClients[url] = cli
+	return cli, nil
 }
 
 // 获取一个worker的系统指标（cpu、memory）
 func (obj *Monitor) getWorkerInfo(ctx context.Context, host string, port int64) (*model.SystemState, error) {
 	url := fmt.Sprintf("%s:%d", host, port)
-	conn, err := grpc.Dial(url, grpc.WithTransportCredentials(insecure.NewCredentials()))
+
+	client, err := obj.getWorkerClient(ctx, url)
 	if err != nil {
-		return nil, fmt.Errorf("connect to worker rpc server failed, %w", err)
+		return nil, fmt.Errorf("get worker client failed, %w", err)
 	}
-	defer conn.Close()
-	client := worker.NewWorkerClient(conn)
+
 	rsp, err := client.GetTaskMetric(ctx, &worker.GetTaskMetricReq{})
 	if err != nil {
 		return nil, fmt.Errorf("grpc GetContainerStat fail, %w", err)
@@ -126,16 +184,18 @@ func (obj *Monitor) StartMonitoring(ctx context.Context, interval time.Duration)
 	for {
 		select {
 		case <-ticker.C:
-			workers, err := obj.GetBusyWorkerInfo(ctx)
-			if err != nil {
-				logger.Logger.Errorf("no worker running :%s", err)
-				break
-			}
-			// 持久化数据
-			err = obj.MonitorManager.StorageInfo(ctx, workers)
-			if err != nil {
-				logger.Logger.Errorf("Storage Info failed:%s", err)
-			}
+			go func(ctx context.Context) {
+				workers, err := obj.GetBusyWorkerInfo(ctx)
+				if err != nil {
+					logger.Logger.Errorf("no worker running :%s", err)
+					return
+				}
+				// 持久化数据
+				err = obj.MonitorManager.StorageInfo(ctx, workers)
+				if err != nil {
+					logger.Logger.Errorf("Storage Info failed:%s", err)
+				}
+			}(ctx)
 		case <-ctx.Done():
 			return
 		}
