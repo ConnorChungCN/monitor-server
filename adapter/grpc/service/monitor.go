@@ -9,6 +9,10 @@ import (
 	"hanglok-tech.com/monitor-server/app/executor"
 )
 
+const (
+	timeFormat = "2006-01-02 15:04:05"
+)
+
 type MonitorServer struct {
 	monitor.UnimplementedMonitorServer
 	Monitor *executor.Executor
@@ -31,13 +35,13 @@ func (obj *MonitorServer) QueryAllTaskInfo(ctx context.Context, req *monitor.Que
 	var gpuInquire []*monitor.GpuQuery
 	for _, i := range findResult.CpuResult {
 		cpuInquire = append(cpuInquire, &monitor.CpuQuery{
-			Time:       i.Time.String(),
+			Time:       i.Time.Format(timeFormat),
 			CpuPercent: float32(i.CpuUsage),
 		})
 	}
 	for _, i := range findResult.MemResult {
 		memInquire = append(memInquire, &monitor.MemQuery{
-			Time:     i.Time.String(),
+			Time:     i.Time.Format(timeFormat),
 			MemUsage: float32(i.Usage),
 			MemUsed:  i.Used,
 			MemFree:  i.Free,
@@ -46,7 +50,7 @@ func (obj *MonitorServer) QueryAllTaskInfo(ctx context.Context, req *monitor.Que
 	//GPU proto rsp
 	for _, i := range findResult.GpuResult {
 		gpuInquire = append(gpuInquire, &monitor.GpuQuery{
-			Time:        i.Time.String(),
+			Time:        i.Time.Format(timeFormat),
 			Id:          i.Id,
 			ProdctName:  i.ProductName,
 			GpuUsage:    float32(i.GpuUsage),
