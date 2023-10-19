@@ -86,8 +86,8 @@ func (obj *Monitor) getWorkerClient(ctx context.Context, url string) (*WorkerCli
 	return cli, nil
 }
 
-// 获取一个worker的系统指标（cpu、memory）
-func (obj *Monitor) getWorkerInfo(ctx context.Context, host string, port int64) (*model.SystemState, error) {
+// 获取一个worker的系统指标（cpu、memory、gpu）
+func (obj *Monitor) getWorkerInfo(ctx context.Context, host string, port int64, taskId, algoName, algoVersion string) (*model.SystemState, error) {
 	url := fmt.Sprintf("%s:%d", host, port)
 
 	client, err := obj.getWorkerClient(ctx, url)
@@ -118,31 +118,39 @@ func (obj *Monitor) getWorkerInfo(ctx context.Context, host string, port int64) 
 		return nil, myerrors.ErrTaskFinish
 	}
 	logger.Logger.Infof("gpuStats: %+v\n", gpuStats)
+	cudaVersion := gpuStats.CudaVersion
 	var gpuInfo []*model.GpuInstanceStats
 	for _, v := range gpuStats.GpuInstanceStats {
 		gpuInfo = append(gpuInfo, &model.GpuInstanceStats{
-			Id:          v.Id,
-			ProductName: v.ProductName,
-			GpuUsage:    float32(v.GpuUsage),
-			MemoryUsage: float32(v.MemoryUsage),
-			MemoryUsed:  int64(v.MemoryUsed),
-			MemoryFree:  int64(v.MemoryFree),
+			TaskId:           taskId,
+			AlgorithmName:    algoName,
+			AlgorithmVersion: algoVersion,
+			CudaVersion:      cudaVersion,
+			Id:               v.Id,
+			ProductName:      v.ProductName,
+			GpuUsage:         float64(v.GpuUsage),
+			MemoryUsage:      float64(v.MemoryUsage),
+			MemoryUsed:       int64(v.MemoryUsed),
+			MemoryFree:       int64(v.MemoryFree),
 		})
 	}
 
 	return &model.SystemState{
 		CpuStats: &model.CpuStats{
-			CPUPercent: cpuStats.Usage,
+			TaskId:           taskId,
+			AlgorithmName:    algoName,
+			AlgorithmVersion: algoVersion,
+			CpuUsage:         float64(cpuStats.Usage),
 		},
 		MemoryStats: &model.MemoryStats{
-			Usage: float32(memoryStats.Usage),
-			Used:  int64(memoryStats.Used),
-			Free:  int64(memoryStats.Free),
+			TaskId:           taskId,
+			AlgorithmName:    algoName,
+			AlgorithmVersion: algoVersion,
+			Usage:            float64(memoryStats.Usage),
+			Used:             int64(memoryStats.Used),
+			Free:             int64(memoryStats.Free),
 		},
-		GpuStats: &model.GpuStats{
-			CudaVersion: gpuStats.CudaVersion,
-			GPUsInfo:    gpuInfo,
-		},
+		GpuStats: gpuInfo,
 	}, nil
 }
 
@@ -161,13 +169,11 @@ func (obj *Monitor) GetBusyWorkerInfo(ctx context.Context) ([]*model.SystemState
 		port := v.Port
 		host := v.Host
 		//grpc调用worker获取系统指标
-		systemstate, err := obj.getWorkerInfo(ctx, host, port)
+		systemstate, err := obj.getWorkerInfo(ctx, host, port,
+			v.RunningTask.TaskId, v.RunningTask.Algorithm.Name, v.RunningTask.Algorithm.Version)
 		if err != nil {
 			return nil, fmt.Errorf("grpc GetContainerStat failed: %w", err)
 		}
-		systemstate.AlgorithmName = v.RunningTask.Algorithm.Name
-		systemstate.AlgorithmVersion = v.RunningTask.Algorithm.Version
-		systemstate.TaskId = v.RunningTask.TaskId
 		retWorkers = append(retWorkers, systemstate)
 	}
 	if len(retWorkers) == 0 {
@@ -191,7 +197,7 @@ func (obj *Monitor) StartMonitoring(ctx context.Context, interval time.Duration)
 					return
 				}
 				// 持久化数据
-				err = obj.MonitorManager.StorageInfo(ctx, workers)
+				err = obj.MonitorManager.StorageMetrics(ctx, workers)
 				if err != nil {
 					logger.Logger.Errorf("Storage Info failed:%s", err)
 				}

@@ -1,34 +1,41 @@
 package model
 
+import "time"
+
 type SystemState struct {
-	TaskId           string
-	AlgorithmName    string
-	AlgorithmVersion string
-	CpuStats         *CpuStats
-	MemoryStats      *MemoryStats
-	GpuStats         *GpuStats
+	CpuStats    *CpuStats
+	MemoryStats *MemoryStats
+	GpuStats    []*GpuInstanceStats
 }
 
 type CpuStats struct {
-	CPUPercent float32
+	TaskId           string
+	AlgorithmName    string
+	AlgorithmVersion string
+	Time             time.Time
+	CpuUsage         float64
 }
 
 type MemoryStats struct {
-	Usage float32
-	Used  int64
-	Free  int64
-}
-
-type GpuStats struct {
-	CudaVersion string
-	GPUsInfo    []*GpuInstanceStats
+	TaskId           string
+	AlgorithmName    string
+	AlgorithmVersion string
+	Time             time.Time
+	Usage            float64
+	Used             int64
+	Free             int64
 }
 
 type GpuInstanceStats struct {
-	Id          string
-	ProductName string
-	GpuUsage    float32
-	MemoryUsage float32
-	MemoryUsed  int64
-	MemoryFree  int64
+	TaskId           string
+	AlgorithmName    string
+	AlgorithmVersion string
+	Time             time.Time
+	CudaVersion      string
+	Id               string
+	ProductName      string
+	GpuUsage         float64
+	MemoryUsage      float64
+	MemoryUsed       int64
+	MemoryFree       int64
 }
