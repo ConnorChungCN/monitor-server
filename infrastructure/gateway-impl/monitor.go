@@ -22,7 +22,7 @@ func NewMonitorGateway(influxDBClient *client.InfluxDBClient, schedulerClient *c
 	}, nil
 }
 
-func (obj *MonitorGateway) StorageInfo(ctx context.Context, workers []*model.SystemState) error {
+func (obj *MonitorGateway) StorageMetrics(ctx context.Context, workers []*model.SystemState) error {
 	if workers == nil {
 		return nil
 	}
@@ -33,20 +33,20 @@ func (obj *MonitorGateway) StorageInfo(ctx context.Context, workers []*model.Sys
 		timeStamp := time.Now()
 		cpuDataPoints = append(cpuDataPoints, &client.DataPoint{
 			Tags: map[string]string{
-				"AlgorithmName":    v.AlgorithmName,
-				"AlgorithmVersion": v.AlgorithmVersion,
-				"TaskId":           v.TaskId,
+				"AlgorithmName":    v.CpuStats.AlgorithmName,
+				"AlgorithmVersion": v.CpuStats.AlgorithmVersion,
+				"TaskId":           v.CpuStats.TaskId,
 			},
 			Fields: map[string]interface{}{
-				"CPUPercent": v.CpuStats.CPUPercent,
+				"CPUPercent": v.CpuStats.CpuUsage,
 			},
 			Timestamp: timeStamp,
 		})
 		memoryDataPoints = append(memoryDataPoints, &client.DataPoint{
 			Tags: map[string]string{
-				"AlgorithmName":    v.AlgorithmName,
-				"AlgorithmVersion": v.AlgorithmVersion,
-				"TaskId":           v.TaskId,
+				"AlgorithmName":    v.MemoryStats.AlgorithmName,
+				"AlgorithmVersion": v.MemoryStats.AlgorithmVersion,
+				"TaskId":           v.MemoryStats.TaskId,
 			},
 			Fields: map[string]interface{}{
 				"MemoryUsage": v.MemoryStats.Usage,
@@ -55,13 +55,13 @@ func (obj *MonitorGateway) StorageInfo(ctx context.Context, workers []*model.Sys
 			},
 			Timestamp: timeStamp,
 		})
-		for _, gpuInfo := range v.GpuStats.GPUsInfo {
+		for _, gpuInfo := range v.GpuStats {
 			gpuDataPoints = append(gpuDataPoints, &client.DataPoint{
 				Tags: map[string]string{
-					"AlgorithmName":    v.AlgorithmName,
-					"AlgorithmVersion": v.AlgorithmVersion,
-					"TaskId":           v.TaskId,
-					"CudaVersion":      v.GpuStats.CudaVersion,
+					"AlgorithmName":    gpuInfo.AlgorithmName,
+					"AlgorithmVersion": gpuInfo.AlgorithmVersion,
+					"TaskId":           gpuInfo.TaskId,
+					"CudaVersion":      gpuInfo.CudaVersion,
 				},
 				Fields: map[string]interface{}{
 					"Id":          gpuInfo.Id,
@@ -81,11 +81,8 @@ func (obj *MonitorGateway) StorageInfo(ctx context.Context, workers []*model.Sys
 	return nil
 }
 
-func (obj *MonitorGateway) QuerySummary(ctx context.Context, taskId string) (*model.QueryAllTaskInfo, error) {
-	// 初始化一个 ResultByTaskId 结构体
-	result := &model.QueryAllTaskInfo{
-		TaskId: taskId,
-	}
+func (obj *MonitorGateway) QueryCpuStatsByTask(ctx context.Context, taskId string) ([]*model.CpuStats, error) {
+	cpuResult := make([]*model.CpuStats, 0)
 	// 查询 containerCPUState 中的数据
 	// 使用 WHERE "TaskId"='%s'会限定只有一个Series
 	cpuQueryString := fmt.Sprintf(`SELECT "CPUPercent" FROM containerCPUState WHERE "TaskId"='%s'`, taskId)
@@ -94,20 +91,23 @@ func (obj *MonitorGateway) QuerySummary(ctx context.Context, taskId string) (*mo
 		return nil, fmt.Errorf("query failed: %w", err)
 	}
 	if len(cpuRsp.Results) > 0 && len(cpuRsp.Results[0].Series) > 0 {
-		var cpuInquire []*model.QueryCpuInfo
 		for _, values := range cpuRsp.Results[0].Series[0].Values {
 			// values 是一个 []interface{}，其中包含了每条记录的字段值
 			// 将 values 中的字段值提取出来并进行相应的处理。values[0]是时间戳，value[1]是CPUPercent的值
 			timeInt, _ := values[0].(json.Number).Int64()
 			timestamp := time.Unix(timeInt, 0)
 			cpuPercentFloat, _ := values[1].(json.Number).Float64()
-			cpuInquire = append(cpuInquire, &model.QueryCpuInfo{
-				Time:       timestamp.String(),
-				CpuPercent: cpuPercentFloat,
+			cpuResult = append(cpuResult, &model.CpuStats{
+				Time:     timestamp,
+				CpuUsage: cpuPercentFloat,
 			})
 		}
-		result.CpuResult = cpuInquire
 	}
+	return cpuResult, nil
+}
+
+func (obj *MonitorGateway) QueryMemStatsByTask(ctx context.Context, taskId string) ([]*model.MemoryStats, error) {
+	memResult := make([]*model.MemoryStats, 0)
 	// 查询 containerMemoryState 中的数据
 	memoryQueryString := fmt.Sprintf(`SELECT "MemoryUsage", "MemoryUsed", "MemoryFree" FROM containerMemState WHERE "TaskId"='%s'`, taskId)
 	memoryRsp, err := obj.InfluxDBClient.QueryData(memoryQueryString)
@@ -117,22 +117,25 @@ func (obj *MonitorGateway) QuerySummary(ctx context.Context, taskId string) (*mo
 	//memoryRsp.Results[0].Series[0].Columns字段名数组
 	//memoryRsp.Results[0].Series[0].Values是[时间, memoryUsed的值, memoryMaxUsed的值]
 	if len(memoryRsp.Results) > 0 && len(memoryRsp.Results[0].Series) > 0 {
-		var memInquire []*model.QueryMemInfo
 		for _, values := range memoryRsp.Results[0].Series[0].Values {
 			timeInt, _ := values[0].(json.Number).Int64()
 			timestamp := time.Unix(timeInt, 0)
 			usageFloat, _ := values[1].(json.Number).Float64()
 			usedInt, _ := values[2].(json.Number).Int64()
 			freeInt, _ := values[3].(json.Number).Int64()
-			memInquire = append(memInquire, &model.QueryMemInfo{
-				Time:  timestamp.String(),
+			memResult = append(memResult, &model.MemoryStats{
+				Time:  timestamp,
 				Usage: usageFloat,
 				Used:  usedInt,
 				Free:  freeInt,
 			})
 		}
-		result.MemResult = memInquire
 	}
+	return memResult, nil
+}
+
+func (obj *MonitorGateway) QueryGpuStatsByTask(ctx context.Context, taskId string) ([]*model.GpuInstanceStats, error) {
+	GpuResult := make([]*model.GpuInstanceStats, 0)
 	// 查询 containerGPUState 中的数据
 	gpuQueryString := fmt.Sprintf(`SELECT "Id", "ProductName", "GpuUsage", "MemoryUsage", "MemoryUsed", "MemoryFree" FROM containerGPUState WHERE "TaskId"='%s'`, taskId)
 	gpuRsp, err := obj.InfluxDBClient.QueryData(gpuQueryString)
@@ -140,7 +143,6 @@ func (obj *MonitorGateway) QuerySummary(ctx context.Context, taskId string) (*mo
 		return nil, fmt.Errorf("query failed: %w", err)
 	}
 	if len(gpuRsp.Results) > 0 && len(gpuRsp.Results[0].Series) > 0 {
-		var GpuInquire []*model.QueryGpuInfo
 		for _, values := range gpuRsp.Results[0].Series[0].Values {
 			timeInt, _ := values[0].(json.Number).Int64()
 			timestamp := time.Unix(timeInt, 0)
@@ -150,8 +152,8 @@ func (obj *MonitorGateway) QuerySummary(ctx context.Context, taskId string) (*mo
 			MemoryUsageFloat, _ := values[4].(json.Number).Float64()
 			MemoryUsedInt, _ := values[5].(json.Number).Int64()
 			MemoryFreeInt, _ := values[6].(json.Number).Int64()
-			GpuInquire = append(GpuInquire, &model.QueryGpuInfo{
-				Time:        timestamp.String(),
+			GpuResult = append(GpuResult, &model.GpuInstanceStats{
+				Time:        timestamp,
 				Id:          idString,
 				ProductName: ProductNameString,
 				GpuUsage:    GpuUsageFloat,
@@ -160,16 +162,13 @@ func (obj *MonitorGateway) QuerySummary(ctx context.Context, taskId string) (*mo
 				MemoryFree:  MemoryFreeInt,
 			})
 		}
-		result.GpuResult = GpuInquire
 	}
-	return result, nil
+	return GpuResult, nil
 }
 
-func (obj *MonitorGateway) QueryAvg(ctx context.Context, taskId string) (*model.QueryAvgTaskInfo, error) {
+func (obj *MonitorGateway) QuerySummaryByTask(ctx context.Context, taskId string) (*model.Summary, error) {
 	// 初始化一个 ResultByTaskId 结构体
-	result := &model.QueryAvgTaskInfo{
-		TaskId: taskId,
-	}
+	result := &model.Summary{}
 	cpuQueryString := fmt.Sprintf(`SELECT "CPUPercent" FROM containerCPUState WHERE "TaskId"='%s'`, taskId)
 	cpuRsp, err := obj.InfluxDBClient.QueryData(cpuQueryString)
 	if err != nil {

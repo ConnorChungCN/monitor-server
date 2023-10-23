@@ -20,17 +20,31 @@ func NewExecutor(monitorManager gateway.MonitorManager) *Executor {
 	}
 }
 
-func (obj *Executor) QuerySummary(ctx context.Context, taskId string) (*model.QueryAllTaskInfo, error) {
-	findResult, err := obj.MonitorManager.QuerySummary(ctx, taskId)
+func (obj *Executor) QuerySystemMetrics(ctx context.Context, taskId string) (*SystemMetrics, error) {
+	cpuResult, err := obj.MonitorManager.QueryCpuStatsByTask(ctx, taskId)
 	if err != nil {
-		logger.Logger.Errorf("FindByTaskId fail: %s", err)
-		return nil, fmt.Errorf("FindByTaskId fail: %s", err)
+		logger.Logger.Errorf("query cpu stats fail: %s", err)
+		return nil, fmt.Errorf("query cpu stats fail: %s", err)
 	}
-	return findResult, nil
+	memResult, err := obj.MonitorManager.QueryMemStatsByTask(ctx, taskId)
+	if err != nil {
+		logger.Logger.Errorf("query mem stats fail: %s", err)
+		return nil, fmt.Errorf("query mem stats fail: %s", err)
+	}
+	gpuResult, err := obj.MonitorManager.QueryGpuStatsByTask(ctx, taskId)
+	if err != nil {
+		logger.Logger.Errorf("query gpu stats fail: %s", err)
+		return nil, fmt.Errorf("query gpu stats fail: %s", err)
+	}
+	return &SystemMetrics{
+		CpuResult: cpuResult,
+		MemResult: memResult,
+		GpuResult: gpuResult,
+	}, nil
 }
 
-func (obj *Executor) QueryAvg(ctx context.Context, taskId string) (*model.QueryAvgTaskInfo, error) {
-	findResult, err := obj.MonitorManager.QueryAvg(ctx, taskId)
+func (obj *Executor) QuerySummary(ctx context.Context, taskId string) (*model.Summary, error) {
+	findResult, err := obj.MonitorManager.QuerySummaryByTask(ctx, taskId)
 	if err != nil {
 		logger.Logger.Errorf("FindByTaskId fail: %s", err)
 		return nil, fmt.Errorf("FindByTaskId fail: %s", err)

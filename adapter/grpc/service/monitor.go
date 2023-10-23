@@ -9,6 +9,10 @@ import (
 	"hanglok-tech.com/monitor-server/app/executor"
 )
 
+const (
+	timeFormat = "2006-01-02 15:04:05"
+)
+
 type MonitorServer struct {
 	monitor.UnimplementedMonitorServer
 	Monitor *executor.Executor
@@ -20,24 +24,24 @@ func NewMonitorServer(monitor *executor.Executor) *MonitorServer {
 	}
 }
 
+// TODO：对时间信息进行转换——>年月日
 func (obj *MonitorServer) QueryAllTaskInfo(ctx context.Context, req *monitor.QueryAllTaskInfoReq) (*monitor.QueryAllTaskInfoRsp, error) {
-	findResult, err := obj.Monitor.QuerySummary(ctx, req.TaskId)
+	findResult, err := obj.Monitor.QuerySystemMetrics(ctx, req.TaskId)
 	if err != nil {
 		return nil, status.Errorf(codes.Unknown, "Find Task Info By Id failed, %w", err)
 	}
-	//TODO:增加Memory、GPU
 	var cpuInquire []*monitor.CpuQuery
 	var memInquire []*monitor.MemQuery
 	var gpuInquire []*monitor.GpuQuery
 	for _, i := range findResult.CpuResult {
 		cpuInquire = append(cpuInquire, &monitor.CpuQuery{
-			Time:       i.Time,
-			CpuPercent: float32(i.CpuPercent),
+			Time:       i.Time.Format(timeFormat),
+			CpuPercent: float32(i.CpuUsage),
 		})
 	}
 	for _, i := range findResult.MemResult {
 		memInquire = append(memInquire, &monitor.MemQuery{
-			Time:     i.Time,
+			Time:     i.Time.Format(timeFormat),
 			MemUsage: float32(i.Usage),
 			MemUsed:  i.Used,
 			MemFree:  i.Free,
@@ -46,7 +50,7 @@ func (obj *MonitorServer) QueryAllTaskInfo(ctx context.Context, req *monitor.Que
 	//GPU proto rsp
 	for _, i := range findResult.GpuResult {
 		gpuInquire = append(gpuInquire, &monitor.GpuQuery{
-			Time:        i.Time,
+			Time:        i.Time.Format(timeFormat),
 			Id:          i.Id,
 			ProdctName:  i.ProductName,
 			GpuUsage:    float32(i.GpuUsage),
@@ -63,7 +67,7 @@ func (obj *MonitorServer) QueryAllTaskInfo(ctx context.Context, req *monitor.Que
 }
 
 func (obj *MonitorServer) QueryAvgTaskInfo(ctx context.Context, req *monitor.QueryAvgTaskInfoReq) (*monitor.QueryAvgTaskInfoRsp, error) {
-	findResult, err := obj.Monitor.QueryAvg(ctx, req.TaskId)
+	findResult, err := obj.Monitor.QuerySummary(ctx, req.TaskId)
 	if err != nil {
 		return nil, status.Errorf(codes.Unknown, "Find Task Info By Id failed, %w", err)
 	}
